@@ -1,19 +1,14 @@
-"""
-pygame visualization for cube2 type Rubik's cube
-"""
-import sys
 import pygame
-import cube2
-
-
-# pylint: disable=no-member
+import sys
+import copy
+import random
 
 # Initialize pygame
 pygame.init()
 
 # Set up the display
-SCREEN_SIZE = 450
-screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
+screen_size = 450
+screen = pygame.display.set_mode((screen_size, screen_size))
 pygame.display.set_caption("Rubik's Cube")
 
 # Colors and settings
@@ -26,45 +21,36 @@ yellow = (255,255,0)
 orange = (255,165,0)
 green = (0,255, 0)
 
-# define color map
-color_map = {
-    "R": red,
-    "G": green,
-    "O": orange,
-    "B": blue,
-    "Y": yellow,
-    "W": white
-}
+highlight_color = (200, 200, 255)  # Light blue for highlighting
+cell_size = screen_size // 9
+highlight_pos = [0, 0]
 
 # Fonts for numbers
 font = pygame.font.Font(None, 40)  # None uses the default font, 40 is the size
 
 # function to get filename from user
-def get_filename(prompt):
-    """
-    Function to prompt a user for a filename
-    """
+def get_filename(prompt,error=''):
     input_active = True
     user_input = []
     pygame.display.set_caption(prompt)  # Set window title to show prompt
 
     while input_active:
-        for file_input_event in pygame.event.get():
-            if file_input_event.type == pygame.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif file_input_event.type == pygame.KEYDOWN:
-                if file_input_event.key == pygame.K_RETURN:
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
                     input_active = False
-                elif file_input_event.key == pygame.K_BACKSPACE:
+                elif event.key == pygame.K_BACKSPACE:
                     user_input = user_input[:-1]
                 else:
-                    user_input.append(file_input_event.unicode)
-
+                    user_input.append(event.unicode)
+        
         # Render the current text
         screen.fill(gray)
         text_surface = font.render(''.join(user_input), True, black)
-        screen.blit(text_surface, (10, SCREEN_SIZE // 2))
+        screen.blit(text_surface, (10, screen_size // 2))
         pygame.display.flip()
 
 
@@ -73,194 +59,135 @@ def get_filename(prompt):
 
 # Function to draw the cube
 
-def draw_face(cube,face,corners):
-    """
-    Function to draw a face on a cube in pygame
-    """
-    upper_left, upper_right, lower_right, lower_left = corners
-
-    # calculate size of a square within the face
-    square_size = int((upper_right[0] - corners[0][0])/3)
-
-    # width = 2 for outer square outline
+def draw_face(face,upper_left, upper_right, lower_right, lower_left):
+    square_size = int((upper_right[0] - upper_left[0])/3)
     width=2
-
-    # Draw outline, could we user draw.rectangle here instead?
+    
+    # Draw outline
     pygame.draw.line(screen, black, upper_left, upper_right, width)
     pygame.draw.line(screen, black, upper_right, lower_right, width)
     pygame.draw.line(screen, black, lower_right, lower_left, width)
     pygame.draw.line(screen, black, lower_left, upper_left, width)
 
     # draw inner grid
-    # width=1 for inner grid
     width = 1
-    # factor 1 and 2
-    for factor in range(1,3):
-        # horizontal line
-        pygame.draw.line(
-                screen,
-                black,
-                (upper_left[0],upper_left[1]+factor*square_size),
-                (upper_right[0],upper_right[1]+factor*square_size),
-                width
-            )
-        # vertical line
-        pygame.draw.line(
-                screen,
-                black,
-                (upper_left[0]+factor*square_size,upper_left[1]),
-                (lower_left[0]+factor*square_size,lower_left[1]),
-                width
-            )
+    x_1,y_1 = upper_left 
+    x_2,y_2 = upper_right
+    y_1+=square_size
+    y_2+=square_size
+    pygame.draw.line(screen, black, (x_1,y_1), (x_2,y_2), width)
+    y_1+=square_size
+    y_2+=square_size
+    pygame.draw.line(screen, black, (x_1,y_1), (x_2,y_2), width)
+    x_1,y_1 = upper_left 
+    x_2,y_2 = lower_left
+    x_1+=square_size
+    x_2+=square_size
+    pygame.draw.line(screen, black, (x_1,y_1), (x_2,y_2), width)
+    x_1+=square_size
+    x_2+=square_size
+    pygame.draw.line(screen, black, (x_1,y_1), (x_2,y_2), width)
 
-    # fill squares relative to upper_left corner
-    x_1, y_1 = upper_left
-    # poisitions 1-9 as defined in cube2
-    for position in range(1,10):
-        # new row
-        if position in [4,7]:
-            y_1+=square_size
-        # first square in the row
-        if position in [1,4,7]:
-            x_1 = upper_left[0]
-        # otherwise increment to next square
-        else:
-            x_1+=square_size
-        # draw rectangle using color map and the color of the square in position on face
-        rect = pygame.draw.rect(
-                screen,
-                color_map[cube.get_square(face,position)['color']],
-                (x_1+1, y_1+1, square_size-1, square_size-1)
-            )
-        if cube.debug:
-            text = pygame.font.Font(None, 15).render(
-                    cube.get_square_label(face,position),
-                    True,
-                    black
-                )
-            screen.blit(text,text.get_rect(center = rect.center))
-
-
-def draw_cube(cube):
-    """
-    Function to draw a rubik's cube in pygame
-    """
-    # padding size
-    padding = 5
-    # space occupied by a face and padding
-    face_space = int(SCREEN_SIZE/4)
-    # space occipied by a face without padding
-    face_size = int(SCREEN_SIZE/4)-padding*2
-    # middle of the screen
-    middle = int(SCREEN_SIZE/2)
-    # middle row top
-    row_2 = middle-int(face_size/2)
-    # top row top
-    row_1 = row_2 - face_space
-    # bottom row top
-    row_3 = row_2 + face_space
-    # upper left hand corner of each face, other corners will be calculated relative to this
-    face_corners = {
-        "L": (padding,row_2),
-        "F": (face_space+padding,row_2),
-        "R": (2*face_space+padding,row_2),
-        "B": (3*face_space+padding,row_2),
-        "U": (face_space+padding,row_1),
-        "D": (face_space+padding,row_3)
-
+    colors = {
+        "F": red,
+        "R": green,
+        "B": orange,
+        "L": blue,
+        "U": yellow,
+        "D": white
     }
 
-    for face,upper_left in face_corners.items():
-        #calculate corners relative to upper left
+    # fill squares
+    x_1, y_1 = upper_left
+    for position in range(1,10):
+        if position in [4,7]:
+            y_1+=square_size
+        if position in [1,4,7]:
+            x_1 = upper_left[0]
+        else:
+            x_1+=square_size
+        pygame.draw.rect(screen, colors[face], (x_1+1, y_1+1, square_size-1, square_size-1))
+    
+
+def draw_cube():
+    # 12 squares wide
+    # 9 squares high
+    # 4 faces wide
+    # 3 faces high
+    padding = 5
+    face_size = int(screen_size/4)-padding*2
+    faces = 'L'
+    middle = int(screen_size/2)
+    row_2 = middle-int(face_size/2)
+    row_1 = row_2 - (face_size+padding*2)
+    row_3 = row_2 + (face_size+padding*2)
+    face_corners = { # upper left corners
+        "L": (0+padding,row_2),
+        "F": (padding*3+face_size,row_2),
+        "R": (2*(padding*2+face_size)+padding,row_2),
+        "B": (3*(padding*2+face_size)+padding,row_2),
+        "U": (padding*3+face_size,row_1),
+        "D": (padding*3+face_size,row_3)
+
+    }
+    
+    for face in face_corners:
+        #(5, 172) (112, 172) (112, 278) (5, 278)
+        upper_left = face_corners[face]
         upper_right = (upper_left[0] + face_size, upper_left[1])
         lower_right = (upper_right[0],upper_right[1]+face_size)
         lower_left = (upper_left[0],lower_right[1])
-        # draw the face
-        draw_face(cube,face,(upper_left, upper_right, lower_right, lower_left))
+        
+        draw_face(face,upper_left, upper_right, lower_right, lower_left)
+        
+
+
 
 # Main game loop
-RUNNING = True
-mycube = cube2.Cube()
-while RUNNING:
+running = True
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            RUNNING = False
+            running = False
         elif event.type == pygame.KEYDOWN:
             # commands from cube main
-            if event.key == pygame.K_s:
-                if pygame.key.get_mods() & pygame.KMOD_CTRL:
-                    FILENAME = get_filename("Enter filename to save:")
-                    mycube.save(FILENAME)
-                else:
-                    mycube.scramble()
-            elif event.key == pygame.K_u:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("U'")
-                else:
-                    mycube.make_move("U")
-            elif event.key == pygame.K_d:
-                if pygame.key.get_mods() & pygame.KMOD_CTRL:
-                    # toggle debug mode
-                    mycube.set_debug(not mycube.debug)
-                elif pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("D'")
-                else:
-                    mycube.make_move("D")
-            elif event.key == pygame.K_r:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("R'")
-                else:
-                    mycube.make_move("R")
-            elif event.key == pygame.K_l:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("L'")
-                elif pygame.key.get_mods() & pygame.KMOD_CTRL:
-                    FILENAME = get_filename("Enter filename to load:")
-                    mycube.load(FILENAME)
-                else:
-                    mycube.make_move("L")
-            elif event.key == pygame.K_f:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("F'")
-                else:
-                    mycube.make_move("F")
-            elif event.key == pygame.K_b:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("B'")
-                else:
-                    mycube.make_move("B")
-            elif event.key == pygame.K_x:
-                if pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                    mycube.make_move("X'")
-                else:
-                    mycube.make_move("X")
-            elif event.key == pygame.K_1:
-                mycube.solve_white_cross()
-            elif event.key == pygame.K_2:
-                mycube.solve_white_corners()
-            elif event.key == pygame.K_3:
-                mycube.solve_second_layer()
-            elif event.key == pygame.K_4:
-                mycube.solve_yellow_cross()
-            elif event.key == pygame.K_5:
-                mycube.solve_yellow_edges()
-            elif event.key == pygame.K_6:
-                mycube.solve_yellow_corners()
-            elif event.key == pygame.K_7:
-                mycube.orient_yellow_corners()
-            elif event.key == pygame.K_0:
-                mycube.solve()
+            if event.key == pygame.K_LEFT and highlight_pos[0] > 0:
+                highlight_pos[0] -= 1
+            elif event.key == pygame.K_RIGHT and highlight_pos[0] < 8:
+                highlight_pos[0] += 1
+            elif event.key == pygame.K_UP and highlight_pos[1] > 0:
+                highlight_pos[1] -= 1
+            elif event.key == pygame.K_DOWN and highlight_pos[1] < 8:
+                highlight_pos[1] += 1
+            elif pygame.K_0 <= event.key <= pygame.K_9:
+                num = event.key - pygame.K_0  # Get the number key that was pressed
+            elif  event.key ==  pygame.K_s:
+                filename = get_filename("Enter filename to save:")
+                #sudoku_board.save(filename)
+                #start_board = copy.deepcopy(sudoku_board.board)
+            elif  event.key ==  pygame.K_l:
+                filename = get_filename("Enter filename to load:")
+                #if sudoku_board.load(filename):
+                #    start_board = copy.deepcopy(sudoku_board.board)
+                #else:
+                #    print(f"Failed to load {filename}")
+            elif  event.key ==  pygame.K_x:
+                #sudoku_board.solve()
+                pass
             elif  event.key ==  pygame.K_n:
-                mycube = cube2.Cube()
-            elif  event.key ==  pygame.K_q:
-                RUNNING = False
+                #sudoku_board.puzzle(level='easy')
+                #start_board = copy.deepcopy(sudoku_board.board)
+                pass
+            elif  event.key ==  pygame.K_1:
+                running = False
+                
 
     # Fill the screen with white
     screen.fill(gray)
-
+    
     # Draw the grid and numbers on top
     #draw_grid(sudoku_board)
-    draw_cube(mycube)
+    draw_cube()
 
     # Update the display
     pygame.display.flip()
