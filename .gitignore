@@ -1,0 +1,12 @@
+# Python artifacts
+__pycache__/
+*.pyc
+
+# UV environment lock (optional if reproducibility isn't critical)
+uv.lock
+
+# Pyenv local version file
+.python-version
+
+# Cube state/output files
+cube/*.cube
