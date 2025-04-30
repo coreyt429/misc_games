@@ -2,7 +2,7 @@ import cube2
 import cube
 
 winners = {0: 0, 1: 0, 2: 0}
-for test in range(10000):
+for test in range(1000):
     print("Cube 2")
     c = cube2.Cube()
     c.scramble()
@@ -10,7 +10,7 @@ for test in range(10000):
     time_2 = c.clock()
 
     print("Cube 1")
-    c = cube.cube("clock.cube")
+    c = cube.Cube("clock.cube")
     # c.scramble()
     # c.save('clock1.cube')
     # c.scramble()

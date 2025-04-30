@@ -1,10 +1,21 @@
+"""
+cube.py
+A class representing a Rubik's Cube with various functionalities.
+It includes methods for initializing, printing, rotating, scrambling,
+solving, and saving/loading the cube state.
+"""
+
 import json
 import logging
 import random
 import time
 
 
-class cube:
+class Cube:
+    """
+    A class representing a Rubik's Cube.
+    """
+
     COLORS = {
         "K": "\033[0;30;40m",  # Black text on Black background (reset)
         "R": "\033[30;41m",  # Black text on Red background
@@ -22,15 +33,17 @@ class cube:
         self.colors = "RGOBYW"
         self.sides = "FRBL"
         self.order = "DFRBLU"
-        self.debug = False
-        self.type = 1
-        self.original_logging_level = logging.getLogger().getEffectiveLevel()
+        self.cfg = {
+            "debug": False,
+            "scramble": 40,
+            "type": 1,
+            "original_logging_level": logging.getLogger().getEffectiveLevel(),
+        }
         self.new_cube()  # initialize cube even if we are loading a file
         if filename is not None:
             self.load(filename)
 
     def print(self):
-        logging.debug(f"cube{self.type}.print()")
         """
         Prints the cube in a formatted manner with colors.
         """
@@ -62,7 +75,7 @@ class cube:
             for square in row:
                 count += 1
                 color = self.COLORS[square[0]]
-                if self.debug:
+                if self.cfg['debug']:
                     row_string += f"{color}{square}{self.RESET} "
                 else:
                     row_string += f"{color}{self.BLOCK}{self.RESET} "
@@ -88,15 +101,14 @@ class cube:
         }
 
     def set_debug(self, debug):
-        logging.debug(f"cube.set_debug({debug})")
         """
         Sets the debug mode.
         """
-        self.debug = debug
+        self.cfg['debug'] = debug
         if debug:
             logging.getLogger().setLevel(logging.DEBUG)
         else:
-            logging.getLogger().setLevel(self.original_logging_level)
+            logging.getLogger().setLevel(self.cfg['original_logging_level'])
 
     def save(self, filename):
         """
@@ -117,12 +129,12 @@ class cube:
             save_json = json.dumps(save_data, indent=4)
 
             # Write the JSON string to a file
-            with open(filename, "w") as file:
+            with open(filename, "w", encoding='utf-8') as file:
                 file.write(save_json)
 
-            logging.info(f"Cube successfully saved to {filename}")
-        except Exception as e:
-            logging.warning(f"An error occurred: {e}")
+            logging.info("Cube successfully saved to %s", filename)
+        except (IOError, json.JSONDecodeError) as e:
+            logging.warning("An error occurred while saving/loading the cube: %s", e)
 
     def load(self, filename):
         """
@@ -132,15 +144,6 @@ class cube:
         filename (str): The name of the file to load the JSON data.
         """
         try:
-            """
-            {
-  "F1": "R1",
-  "F2": "R2",
-  "F3": "R3",
-  "F4": "R4",
-  "F5": "R5",
-  "F6": "R6",
-          """
             positions = {
                 1: (0, 0),  # 1
                 2: (0, 1),  # 2
@@ -153,69 +156,102 @@ class cube:
                 9: (2, 2),  # 9
             }
             # Read the JSON string from a file
-            with open(filename, "r") as file:
+            with open(filename, "r", encoding='utf-8') as file:
                 data_json = file.read()
             data = json.loads(data_json)
             for position, value in data.items():
                 row, col = positions[int(position[1])]
                 self.cube[position[0]][row][col] = value
-            logging.info(f"Cube successfully loaded from {filename}")
-        except Exception as e:
-            logging.warning(f"An error occurred: {e}")
+            logging.info("Cube successfully loaded from %s", filename)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.warning("An error occurred while loading the cube: %s", e)
 
     def scramble(self, moves=40):
-        logging.debug(f"cube.scramble({moves})")
+        """
+        Scramble the cube by performing a series of random rotations.
+        Parameters:
+          moves (int): The number of random moves to perform.
+        """
+        logging.debug("cube.scramble(%d)", moves)
         for _ in range(moves):
             face = random.choice(self.faces + "CM")
             clockwise = random.choice([True, False])
             self.rotate(face, clockwise)
 
     def orient_cube(self):
-        logging.debug(f"cube.orient_cube()")
+        """
+        Orient the cube so that the white face is on top and the red face is in front.
+        """
+        logging.debug("cube.orient_cube()")
         self.orient_face("W", "D")
         while self.cube["F"][1][1][0] != "R":
             self.rotate_cube()
 
     def orient_face(self, color, face):
-        logging.debug(f"cube.orient_face({color},{face})")
+        """
+        Orient the cube so that the specified color is on the specified face.
+        Parameters:
+          color (str): The color to orient.
+          face (str): The face to orient the color on.
+        """
+        logging.debug("cube.orient_face(%s, %s)", color, face)
         if face in "UDFB":
             while self.find_center(color) not in "UDFB":
-                logging.debug(f"Rotating from {self.find_center(color)}")
+                logging.debug("Rotating from %s", self.find_center(color))
                 self.rotate_cube()
             while self.find_center(color) not in face:
-                logging.debug(f"Tilting from {self.find_center(color)}")
-                self.tilt_cube(cube)
+                logging.debug("Tilting from %s", self.find_center(color))
+                self.tilt_cube()
         else:
-            logging.debug(f"Face {face} is either L OR R")
+            logging.debug("Face %s is either L OR R", face)
             while self.find_center(color) not in "LRFB":
-                logging.debug(f"Tilting from {self.find_center(color)}")
+                logging.debug("Tilting from %s", self.find_center(color))
                 self.tilt_cube()
             while self.find_center(color) not in face:
-                logging.debug(f"Rotating from {self.find_center(color)}")
+                logging.debug("Rotating from %s", self.find_center(color))
                 self.rotate_cube()
 
     def find_center(self, color):
-        logging.debug(f"cube.find_center({color})")
+        """
+        Find the center piece of the specified color.
+        """
+        logging.debug("cube.find_center(%s)", color)
         for face in self.faces:
-            logging.debug(f"find_center({color}) {face} {self.cube[face][1][1]}")
+            logging.debug("find_center(%s) %s %s", color, face, self.cube[face][1][1])
             if self.cube[face][1][1][0] == color:
                 return face
+        return None
 
     def rotate_cube(self, clockwise=True):
-        logging.debug(f"cube.rotate_cube({clockwise})")
+        """
+        Rotate the cube around the vertical axis (U and D faces).
+        Parameters:
+          clockwise (bool): Whether to rotate clockwise or counter-clockwise.
+        """
+        logging.debug("cube.rotate_cube(%s)", clockwise)
         self.rotate("U", not clockwise)
         # decision point, should middle rotate like up or down?
         self.rotate("M", not clockwise)
         self.rotate("D", clockwise)
 
     def tilt_cube(self, clockwise=True):
-        logging.debug(f"cube.tilt_cube({clockwise})")
+        """
+        Tilt the cube around the horizontal axis (F and B faces).
+        Parameters:
+          clockwise (bool): Whether to tilt clockwise or counter-clockwise.
+        """
+        logging.debug("cube.tilt_cube(%s)", clockwise)
         self.rotate("L", not clockwise)
         self.rotate("C", clockwise)
         self.rotate("R", clockwise)
 
     def make_move(self, move):
-        logging.debug(f"make_move({move})")
+        """
+        Perform a move on the cube.
+        Parameters:
+          move (str): The move to perform.
+        """
+        logging.debug("make_move(%s)", move)
         if move in "U'F'D'L'R'B'C'M'":
             if move[-1] == "'":
                 self.rotate(move[0], clockwise=False)
@@ -233,15 +269,40 @@ class cube:
                 self.rotate_cube(clockwise=True)
 
     def rotate(self, face, clockwise=True):
+        """
+        Rotate the specified face of the cube.
+        Parameters:
+          face (str): The face to rotate.
+          clockwise (bool): Whether to rotate clockwise or counter-clockwise.
+        """
         # FIXME,  this could be simplified by directly assigning squares:
         # Example:
-        """
-        c = self.cube
-        if face == 'F' and clockwise:
-            c['U'][2][0],c['U'][2][1],c['U'][2][2],c['R'][0][0],c['R'][1][0],c['R'][2][0],c.['D'][0][2],c.['D'][0][1],c.['D'][0][0],c.['L'][2][2],c.['L'][1][2],c.['L'][0][2] = [c.['L'][2][2],c.['L'][1][2],c.['L'][0][2],c['U'][2],c['R'][0][0],c['R'][1][0],c['R'][2][0],c.['D'][0]]
-
-        """
-        logging.debug(f"cube.rotate({face}, {clockwise})")
+        # c = self.cube
+        # if face == "F" and clockwise:
+        #     (
+        #         c["U"][2][0],
+        #         c["U"][2][1],
+        #         c["U"][2][2],
+        #         c["R"][0][0],
+        #         c["R"][1][0],
+        #         c["R"][2][0],
+        #         c["D"][0][2],
+        #         c["D"][0][1],
+        #         c["D"][0][0],
+        #         c["L"][2][2],
+        #         c["L"][1][2],
+        #         c["L"][0][2],
+        #     ) = [
+        #         c["L"][2][2],
+        #         c["L"][1][2],
+        #         c["L"][0][2],
+        #         c["U"][2],
+        #         c["R"][0][0],
+        #         c["R"][1][0],
+        #         c["R"][2][0],
+        #         c["D"][0],
+        #     ]
+        logging.debug("cube.rotate(%s, %s)", face, clockwise)
         # Rotate the face itself
         if face not in "CM":
             if clockwise:
@@ -446,17 +507,22 @@ class cube:
             self.cube["R"][1] = rows_cols[6:9]
             self.cube["B"][1] = rows_cols[9:12]
 
-    """
-    Command String functions
-    """
+    ##########################
+    # Command String functions
+    ##########################
 
     def transpose_command(self, command_string, target, source="F"):
-        logging.debug(f'cube.transpose_command("{command_string}",{target},{source})')
+        """
+        Method to transpose a command string based on the target and source faces.
+        """
+        logging.debug(
+            'cube.transpose_command("%s", %s, %s)', command_string, target, source
+        )
         new_command = ""
         if target in self.sides:
             offset = self.sides.find(target) - self.sides.find(source)
             codex = self.sides[offset:] + self.sides[:offset]
-            logging.debug(f"offset: {offset}")
+            logging.debug("offset: %s", offset)
             for char in command_string:
                 if char in self.sides:
                     idx = self.sides.find(char)
@@ -465,11 +531,14 @@ class cube:
                     new_command += char
         else:
             new_command = "X,X'"
-        logging.debug(f"cube.transpose_command returning {new_command}")
+        logging.debug("cube.transpose_command returning %s", new_command)
         return new_command
 
     def run_command_string(self, command):
-        logging.debug(f"cube.run_command_string(cube,{command})")
+        """
+        Run a command string on the cube.
+        """
+        logging.debug("cube.run_command_string(cube, %s)", command)
         for move in command.rstrip(",").lstrip(",").split(","):
             self.make_move(move)
 
@@ -481,23 +550,29 @@ class cube:
             "R,L,U,U,F,U',D,F,F,R,R,B,B,L,U,U,F',B',U,R,R,D,F,F,U,R,R,U"
         )
 
-    """
-    Search and Identify functions
-    """
+    ###############################
+    # Search and Identify functions
+    ###############################
 
     def find_edge_pieces(self, colors):
-        logging.debug(f"find_edge_pieces({colors})")
+        """
+        Find edge pieces of the specified colors.
+        """
+        logging.debug("find_edge_pieces(%s)", colors)
         edge_pieces = set()
         for face in self.faces:
-            logging.debug(f"{face},{self.cube[face]}")
+            logging.debug("%s,%s", face, self.cube[face])
             for row, col in [(0, 1), (1, 0), (1, 2), (2, 1)]:
-                logging.debug(f"row: {row}, col: {col}")
+                logging.debug("row: %s, col: %s", row, col)
                 if self.cube[face][row][col][0] in colors:
                     edge_pieces.add((face, (row, col)))
         return edge_pieces
 
     def id_position(self, face, position):
-        logging.debug(f"id_position(cube,{face},{position})")
+        """
+        Identify the type of position on the cube (center, edge, corner).
+        """
+        logging.debug("id_position(cube,%s,%s)", face, position)
         retval = {
             "face": face,
             "color": self.color_of_position(face, position),
@@ -529,12 +604,18 @@ class cube:
         return retval
 
     def color_of_position(self, face, position):
-        logging.debug(f"color_of_position({face}, {position})")
+        """
+        Get the color of a specific position on the cube.
+        """
+        logging.debug("color_of_position(%s, %s)", face, position)
         row, col = position
         return self.cube[face][row][col][0]
 
     def find_edge_opposite(self, face, position):
-        logging.debug(f"find_edge_opposite({face}, {position})")
+        """
+        Find the opposite edge piece for a given face and position.
+        """
+        logging.debug("find_edge_opposite(%s, %s)", face, position)
         row, col = position
         opposite_edges = {
             ("U", (0, 1)): ("B", (0, 1)),
@@ -565,7 +646,10 @@ class cube:
         return opposite_edges.get((face, (row, col)), None)
 
     def get_square_label(self, face, position):
-        logging.warning(f"get_square_label({face},{position})")
+        """
+        Get the label of a specific square on the cube.
+        """
+        logging.warning("get_square_label(%s,%s)", face, position)
         positions = {
             1: (0, 0),  # 1
             2: (0, 1),  # 2
@@ -581,6 +665,9 @@ class cube:
         return self.cube[face][row][col]
 
     def get_white_edge_by_color(self, color):
+        """
+        Get the white edge piece by its color.
+        """
         edges = self.find_edge_pieces("W")
         for face, position in edges:
             edge_data = self.id_position(face, position)
@@ -589,7 +676,10 @@ class cube:
         return "F", (1, 1)
 
     def get_white_corner_by_color(self, colors):
-        logging.debug(f"cube.get_white_corner_by_color({colors})")
+        """
+        Get the white corner piece by its colors.
+        """
+        logging.debug("cube.get_white_corner_by_color(%s)", colors)
         corners = self.sort_white_corners(self.find_corner_pieces("W"))
         for face, position in corners:
             corner_data = self.id_position(face, position)
@@ -598,7 +688,10 @@ class cube:
         return "F", (1, 1)
 
     def find_corner_pieces(self, color):
-        logging.debug(f"find_corner_pieces({color})")
+        """
+        Find corner pieces of the specified color.
+        """
+        logging.debug("find_corner_pieces(%s)", color)
         corner_pieces = set()
         for face in self.faces:
             for row, col in [(0, 0), (0, 2), (2, 0), (2, 2)]:
@@ -607,7 +700,10 @@ class cube:
         return corner_pieces
 
     def find_corner_mates(self, face, position):
-        logging.debug(f"cube.find_corner_mates({face},{position})")
+        """
+        Find the corner mates for a given face and position.
+        """
+        logging.debug("cube.find_corner_mates(%s, %s)", face, position)
         row, col = position
         corner_mates = [
             (("F", (0, 0)), ("L", (0, 2)), ("U", (2, 0))),
@@ -625,22 +721,16 @@ class cube:
                 return mates
         return None
 
-    """
-    Solver Functions
-    """
+    ##################
+    # Solver Functions
+    ##################
 
     def solve_white_cross(self):
-        logging.debug(f"cube.solve_white_cross()")
         """
         Solve the bottom edges (white cross)
         """
         self.orient_cube()
-        counter = 0
         while not self.check_white_cross():
-            counter += 1
-            if counter > 100:
-                log.warning("cube.solve_white_cross() too many loops")
-                break
             edge_pieces = self.find_edge_pieces("W")
             sorted_edge_pieces = sorted(
                 edge_pieces, key=lambda x: self.order.index(x[0])
@@ -651,7 +741,10 @@ class cube:
         return self.check_white_cross()
 
     def check_white_cross(self):
-        logging.debug(f"cube.check_white_cross()")
+        """
+        Check if the white cross is solved
+        """
+        logging.debug("cube.check_white_cross()")
         self.orient_cube()
         for square in [
             self.cube["D"][0][1],
@@ -666,20 +759,19 @@ class cube:
                 return False
         return True
 
-    def place_white_edge(self, face, position, recursion_level=-1):
-        logging.debug(f"place_white_edge({face},{position},{recursion_level})")
-        recursion_level += 1
-        if recursion_level > 10:
-            return False
+    def place_white_edge(self, face, position):
+        """
+        Place the white edge in the correct position
+        """
+        logging.debug("place_white_edge(%s,%s,%s)", face, position)
         data = self.id_position(face, position)
         if face in "UD":
-            sides = "FLBR"
+            # sides = "FLBR"
             side_map = "RBOG"
             pos_target = side_map.find(data["opposite_color"])
             pos_current = side_map.find(data["opposite_face_color"])
             moves = abs(pos_current - pos_target)
             if face == "D":
-                # {'face': 'D', 'color': 'W', 'face_color': 'W', 'type': 'edge', 'opposite': ('B', (2, 1)), 'opposite_color': 'G', 'opposite_face_color': 'O'}
                 if (
                     data["color"] == data["face_color"]
                     and data["opposite_color"] == data["opposite_face_color"]
@@ -695,7 +787,7 @@ class cube:
                     face, position = self.get_white_edge_by_color(
                         data["opposite_color"]
                     )
-                    return self.place_white_edge(face, position, recursion_level)
+                    return self.place_white_edge(face, position)
             elif face == "U":
                 if moves > 0:
                     command_string = (
@@ -706,16 +798,13 @@ class cube:
                     face, position = self.get_white_edge_by_color(
                         data["opposite_color"]
                     )
-                    return self.place_white_edge(face, position, recursion_level)
-                else:
-                    command_string = f"{self.find_center(data['opposite_color'])}," * 2
-                    self.run_command_string(command_string)
-                    face, position = self.get_white_edge_by_color(
-                        data["opposite_color"]
-                    )
-                    return self.place_white_edge(face, position, recursion_level)
+                    return self.place_white_edge(face, position)
+                command_string = f"{self.find_center(data['opposite_color'])}," * 2
+                self.run_command_string(command_string)
+                face, position = self.get_white_edge_by_color(data["opposite_color"])
+                return self.place_white_edge(face, position)
         else:  # use transpose for sides
-            logging.debug(f"Transposing command for {face} {position}")
+            logging.debug("Transposing command for %s %s", face, position)
             command_string = None
             if position == (1, 0):
                 command_string = self.transpose_command("L',U,L", face)
@@ -726,14 +815,17 @@ class cube:
             elif position == (2, 1):
                 command_string = self.transpose_command("F',R,U,R',F", face)
             if not command_string is None:
-                logging.debug(f"command_string: {command_string}")
+                logging.debug("command_string: %s", command_string)
                 self.run_command_string(command_string)
                 face, position = self.get_white_edge_by_color(data["opposite_color"])
-                return self.place_white_edge(face, position, recursion_level)
+                return self.place_white_edge(face, position)
         return False
 
     def solve_white_corners(self):
-        logging.debug(f"solve_white_corners()")
+        """
+        Solve the white corners
+        """
+        logging.debug("solve_white_corners()")
         self.orient_cube()
         counter = 0
         # print('solve_white_corners')
@@ -751,7 +843,10 @@ class cube:
         return self.check_white_corners()
 
     def check_white_corners(self):
-        logging.debug(f"check_white_corners()")
+        """
+        Check if the white corners are in the correct position and oriented correctly
+        """
+        logging.debug("check_white_corners()")
         self.orient_cube()
         # are all the white corners facing down
         for square in [
@@ -775,7 +870,10 @@ class cube:
         return True
 
     def sort_white_corners(self, unsorted_corners):
-        logging.debug(f"cube.sort_white_corners({unsorted_corners})")
+        """
+        Sort the white corners based on their colors
+        """
+        logging.debug("cube.sort_white_corners(%s)", unsorted_corners)
         sorted_corners = []
         color_order = [("R", "G"), ("G", "O"), ("O", "B"), ("B", "R")]
         target = color_order.pop()
@@ -790,61 +888,61 @@ class cube:
                     sorted_corners.append((face, position))
                     if len(color_order) > 0:
                         target = color_order.pop()
-            pass
-        logging.debug(f"sort_white_corners({sorted_corners})")
+        logging.debug("sort_white_corners(%s)", sorted_corners)
         return sorted_corners
 
     def check_white_corner(self, face, position):
-        logging.debug(f"check_white_corner({face},{position})")
+        """
+        Check if the white corner is in the correct position and oriented correctly
+        """
+        logging.debug("check_white_corner(%s,%s)", face, position)
         corner_data = self.id_position(face, position)
         colors = corner_data["mate_color"]
         if face == "D":
-            logging.debug(f"{colors} at bottom already")
+            logging.debug("%s at bottom already", colors)
             if sorted(corner_data["mate_color"]) == sorted(
                 corner_data["mate_face_color"]
             ):
-                logging.debug(f"{colors} oriented correctly")
+                logging.debug("%s oriented correctly", colors)
                 return True
-            else:
-                return False
-        else:
-            return False
+        return False
 
-    def place_white_corner(self, face, position, recursion_level=-1):
-        logging.debug(f"place_white_corner({face},{position},{recursion_level})")
-        recursion_level += 1
-        if recursion_level > 10:
-            return False
+    def place_white_corner(self, face, position):
+        """
+        Place the white corner in the correct position
+        """
+        logging.debug("place_white_corner(%s,%s)", face, position)
+        mate_face = None
+        mate_position = None
         corner_data = self.id_position(face, position)
         # save colors so we can find this corner again when we move it.
         colors = corner_data["mate_color"]
         if face == "D":
-            logging.debug(f"{colors} at bottom already")
+            logging.debug("%s at bottom already", colors)
             # if mate_color and mate_face_color have the same colors
             if sorted(corner_data["mate_color"]) == sorted(
                 corner_data["mate_face_color"]
             ):
-                logging.debug(f"{colors} oriented correctly")
+                logging.debug("%s oriented correctly", colors)
                 return True
-            else:
-                logging.debug("Wrong slot")
-                command_strings = {
-                    (0, 0): "L',U,L",
-                    (0, 2): "R,U,R'",
-                    (2, 0): "L,U,L'",
-                    (2, 2): "R',U',R",
-                }
-                self.run_command_string(command_strings[position])
-                face, position = self.get_white_corner_by_color(colors)
-                return self.place_white_corner(face, position, recursion_level)
-        elif face in self.sides:
-            logging.debug(f"{colors} at side {face} {position}")
+            logging.debug("Wrong slot")
+            command_strings = {
+                (0, 0): "L',U,L",
+                (0, 2): "R,U,R'",
+                (2, 0): "L,U,L'",
+                (2, 2): "R',U',R",
+            }
+            self.run_command_string(command_strings[position])
+            face, position = self.get_white_corner_by_color(colors)
+            return self.place_white_corner(face, position)
+        if face in self.sides:
+            logging.debug("%s at side %s %s", colors, face, position)
             if position in ((2, 0), (2, 2)):
-                logging.debug(f"{colors} on bottom row")
+                logging.debug("%s on bottom row", colors)
                 if sorted(corner_data["mate_color"]) == sorted(
                     corner_data["mate_face_color"]
                 ):
-                    logging.debug(f"{colors} is in the correct position, rotating")
+                    logging.debug("%s is in the correct position, rotating", colors)
                     # rotate in place
                     command_string = "L',U',L"  # command for (2,0)
                     if position == (2, 2):
@@ -853,34 +951,31 @@ class cube:
                         self.transpose_command(command_string, face)
                     )
                     face, position = self.get_white_corner_by_color(colors)
-                    return self.place_white_corner(face, position, recursion_level)
-                else:  # pup up to top for next pass
-                    command_string = "L',U',L"  # string for (2,0)
-                    if position == (2, 2):
-                        command_string = "R,U,R'"
-                    self.run_command_string(
-                        self.transpose_command(command_string, face)
-                    )
-                    face, position = self.get_white_corner_by_color(colors)
-                    return self.place_white_corner(face, position, recursion_level)
-            else:
-                logging.debug(f"{colors} on top row")
-                face, position = self.hover_white_corner(face, position)
-                face, position = self.get_white_corner_by_color(colors)
-                corner_data = self.id_position(face, position)
-                command_string = "U,R,U',R'"  # string for (0,2)
-                if position == (0, 0):
-                    command_string = "U',L',U,L"
+                    return self.place_white_corner(face, position)
+                # pup up to top for next pass
+                command_string = "L',U',L"  # string for (2,0)
+                if position == (2, 2):
+                    command_string = "R,U,R'"
                 self.run_command_string(self.transpose_command(command_string, face))
                 face, position = self.get_white_corner_by_color(colors)
-                return self.place_white_corner(face, position, recursion_level)
-        elif face == "U":
-            logging.debug(f"{colors} facing Up")
+                return self.place_white_corner(face, position)
+            logging.debug("%s on top row", colors)
+            face, position = self.hover_white_corner(face, position)
+            face, position = self.get_white_corner_by_color(colors)
+            corner_data = self.id_position(face, position)
+            command_string = "U,R,U',R'"  # string for (0,2)
+            if position == (0, 0):
+                command_string = "U',L',U,L"
+            self.run_command_string(self.transpose_command(command_string, face))
+            face, position = self.get_white_corner_by_color(colors)
+            return self.place_white_corner(face, position)
+        if face == "U":
+            logging.debug("%s facing Up", colors)
             face, position = self.hover_white_corner(face, position)
             face, position = self.get_white_corner_by_color(colors)
             corner_data = self.id_position(face, position)
             if face in self.sides:
-                logging.debug(f"{colors} on side {face} after hovering")
+                logging.debug("%s on side %s after hovering", colors, face)
                 command_string = ""
                 if position == (2, 2):
                     command_string = "R,U,R'"
@@ -890,48 +985,40 @@ class cube:
                     command_string = "F,U,F'"
                 elif position == (0, 0):
                     command_string = "R',F,R,F'"
-                self.run_command_string(command_string, face)
+                self.run_command_string(command_string)
                 face, position = self.get_white_corner_by_color(colors)
-                return self.place_white_corner(face, position, recursion_level)
-            else:
-                logging.debug(f"{colors} on side {face} after hovering")
-                for mate_face, mate_position in corner_data["mates"]:
-                    if mate_face != "U":
-                        corner_data = self.id_position(mate_face, mate_position)
-                        break
-                face = mate_face
-                position = mate_position
-                logging.debug(
-                    f"Found a mate: {mate_face} {mate_position} {corner_data}"
+                return self.place_white_corner(face, position)
+            logging.debug("%s on side %s after hovering", colors, face)
+            for mate_face, mate_position in corner_data["mates"]:
+                if mate_face != "U":
+                    corner_data = self.id_position(mate_face, mate_position)
+                    break
+            face = mate_face
+            position = mate_position
+            logging.debug(
+                "Found a mate: %s %s %s", mate_face, mate_position, corner_data
+            )
+            if position == (0, 0):
+                self.run_command_string(
+                    self.transpose_command("L,L,U',L,L,U,L,L", face)
                 )
-                if position == (0, 0):
-                    self.run_command_string(
-                        self.transpose_command("L,L,U',L,L,U,L,L", face)
-                    )
-                if position == (0, 2):
-                    sides = "FLBR"
-                    face_idx = sides.find(face)
-                    face_idx -= 1
-                    if face_idx > 0:
-                        face_idx = 3
-                    tmp_face = sides[face_idx]
-                    self.run_command_string(
-                        self.transpose_command("L,L,U',L,L,U,L,L", tmp_face)
-                    )
-                else:
-                    pass
-                face, position = self.get_white_corner_by_color(colors)
-                return self.place_white_corner(face, position, recursion_level)
-        else:
-            pass
+            if position == (0, 2):
+                sides = "FLBR"
+                face_idx = sides.find(face)
+                face_idx -= 1
+                if face_idx > 0:
+                    face_idx = 3
+                tmp_face = sides[face_idx]
+                self.run_command_string(
+                    self.transpose_command("L,L,U',L,L,U,L,L", tmp_face)
+                )
+            face, position = self.get_white_corner_by_color(colors)
+            return self.place_white_corner(face, position)
         return None
 
     def hover_white_corner(self, face, position):
-        logging.debug(f"cube.hover_white_corner(cube,{face},{position})")
-        # put the white corner on the top above its final position
         """
-        hover_white_corner(cube,B,(0, 0))
-        corner_data {'face': 'B', 'color': 'W', 'face_color': 'O', 'type': 'corner', 'mates': (('B', (0, 0)), ('R', (0, 2)), ('U', (0, 2))), 'mate_color': ['W', 'B', 'R'], 'mate_face_color': ['O', 'G', 'Y']}
+        Hover the white corner to the top layer
         """
         corner_data = self.id_position(face, position)
         match_colors = []
@@ -942,12 +1029,9 @@ class cube:
         while not found:
             found = True
             for color in match_colors:
-                # print(f"Is {color} from {match_colors} in mate_face_color {corner_data['mate_face_color']}")
                 if color not in corner_data["mate_face_color"]:
-                    # print("No")
                     found = False
             if not found:
-                # print("Not aligned, rotate once")
                 sides = "FLBR"
                 self.make_move("U")
                 face_idx = sides.find(face)
@@ -955,15 +1039,18 @@ class cube:
                 if face_idx == 4:
                     face_idx = 0
                 logging.debug(
-                    f" Setting face from {face} to {sides[face_idx]}:{face_idx}"
+                    " Setting face from %s to %s:%d", face, sides[face_idx], face_idx
                 )
                 face = sides[face_idx]
                 corner_data = self.id_position(face, position)
-        logging.debug(f"corner_data {corner_data}")
-        logging.debug(f"returning {face},{position}")
+        logging.debug("corner_data %s", corner_data)
+        logging.debug("returning %s,%s", face, position)
         return face, position
 
     def solve_second_layer(self):
+        """
+        Solve the second layer
+        """
         logging.debug("cube.solve_second_layer()")
         counter = 0
         while not self.check_second_layer():
@@ -974,7 +1061,6 @@ class cube:
             edges = self.find_edge_pieces("RGOB")
             for face, position in edges:
                 edge_data = self.id_position(face, position)
-                # {'face': 'R', 'color': 'G', 'face_color': 'G', 'type': 'edge', 'opposite': ('B', (1, 0)), 'opposite_color': 'O', 'opposite_face_color': 'O'}
                 if (
                     edge_data["color"] not in "WY"
                     and edge_data["opposite_color"] not in "WY"
@@ -987,11 +1073,7 @@ class cube:
                     ):
                         if position == (0, 1) and face != "U":
                             sides = "FLBR"
-                            sentinel = 0
                             while edge_data["color"] != edge_data["face_color"]:
-                                sentinel += 1
-                                if sentinel > 4:
-                                    return
                                 self.run_command_string("U")
                                 face_idx = sides.find(face)
                                 face_idx += 1
@@ -1015,25 +1097,23 @@ class cube:
                                     self.transpose_command("U,R,U',R',U',F',U,F", face)
                                 )
                             break
-                        elif face == "U":
-                            pass
-                        else:
-                            # print("Not top: ",edge_data,position,counter)
+                        if face != "U":
                             if position == (1, 2):  # right side
-                                # run_command_string(cube,transpose_command("U,R,U',R',U',F',U,F,U,U,U,R,U',R',U',F',U,F",face))
                                 self.run_command_string(
                                     self.transpose_command("U,R,U',R',U',F',U,F", face)
                                 )
                                 break
-                            else:
-                                self.run_command_string(
-                                    self.transpose_command("U',L',U,L,U,F,U',F'", face)
-                                )
-                                break
+                            self.run_command_string(
+                                self.transpose_command("U',L',U,L,U,F,U',F'", face)
+                            )
+                            break
         return self.check_second_layer()
 
     def check_second_layer(self):
-        logging.debug(f"cube.check_second_layer()")
+        """
+        Check if the second layer is complete
+        """
+        logging.debug("cube.check_second_layer()")
         self.orient_cube()
         for side in self.sides:
             # print(side,cube[side][1][0],cube[side][1][1],cube[side][1][2])
@@ -1049,7 +1129,10 @@ class cube:
         return True
 
     def solve_yellow_cross(self):
-        logging.debug(f"solve_yellow_cross()")
+        """
+        Solve the yellow cross
+        """
+        logging.debug("solve_yellow_cross()")
         self.orient_cube()
         counter = 0
         up_count = 0
@@ -1060,8 +1143,7 @@ class cube:
                 break
             edge_pieces = self.find_edge_pieces("Y")
             up_count = 0
-            for face, position in edge_pieces:
-                # print(face,position)
+            for face, _ in edge_pieces:
                 if face == "U":
                     up_count += 1
             if up_count < 4:
@@ -1074,7 +1156,10 @@ class cube:
         return self.check_yellow_cross()
 
     def check_yellow_cross(self):
-        logging.debug(f"check_yellow_cross()")
+        """
+        Check if the yellow cross is complete
+        """
+        logging.debug("check_yellow_cross()")
         self.orient_cube()
         for square in [
             self.cube["U"][0][1],
@@ -1087,16 +1172,17 @@ class cube:
         return True
 
     def solve_yellow_edges(self):
-        logging.debug(f"cube.solve_yellow_edges()")
+        """
+        Solve the yellow edges
+        """
+        logging.debug("cube.solve_yellow_edges()")
         self.orient_cube()
-        changed = True
+        # changed = True
         counter = 0
         sides = self.sides
         target = "RGOB"
-        logging.debug(f"solve_yellow_edges sides: {sides}")
-        # print("solve_yellow_edges",self.count_yellow_edges())
-        while (yellow_edges := self.count_yellow_edges()) < 4:
-            # print("yellow_edges",yellow_edges)
+        logging.debug("solve_yellow_edges sides: %s", sides)
+        while self.count_yellow_edges() < 4:
             counter += 1
             if counter > 100:
                 logging.warning("solve_yellow_edges too many loops")
@@ -1121,18 +1207,16 @@ class cube:
                         self.run_command_string("U")
 
                     if self.cube["R"][0][1][0] == b:
-                        logging.debug(f"{b} is in the right spot")
-                        # a and b are in position
-                        pass
+                        logging.debug("%s is in the right spot", b)
                     elif self.cube["L"][0][1][0] == b:
-                        logging.debug(f"{a} and {b} are swapped")
+                        logging.debug("%s and %s are swapped", a, b)
                         # a and b are swapped
                         self.run_command_string("R,U,R',U,R,U,U,R',U")
                         # line up red edge
                         while self.cube["F"][0][1][0] != a:
                             self.run_command_string("U")
                     else:
-                        logging.debug(f"{b} is on the far side of the world")
+                        logging.debug("%s is on the far side of the world", b)
                         # b is on the opposite side:
                         # rotate
                         self.run_command_string("U'")
@@ -1142,7 +1226,10 @@ class cube:
         return self.check_yellow_edges()
 
     def check_yellow_edges(self):
-        logging.debug(f"cube.check_yellow_edges")
+        """
+        Check if the yellow edges are in the right place
+        """
+        logging.debug("cube.check_yellow_edges")
         self.orient_cube()
         for side in self.sides:
             if self.cube[side][0][1][0] != self.cube[side][1][1][0]:
@@ -1150,20 +1237,25 @@ class cube:
         return True
 
     def count_yellow_edges(self):
+        """
+        Count the number of yellow edges
+        """
         logging.debug("cube.count_yellow_edges()")
         count = 0
         edge_pieces = self.find_edge_pieces("Y")
-        logging.debug(f"edge_pieces: {edge_pieces}")
+        logging.debug("edge_pieces: %s", edge_pieces)
         self.orient_cube()
-        for i in range(4):
-            # self.print()
-            logging.debug(f"{self.cube['F'][0][1]},{self.cube['F'][1][1]}")
+        for _ in range(4):
+            logging.debug("%s,%s", self.cube["F"][0][1], self.cube["F"][1][1])
             if self.cube["F"][0][1][0] == self.cube["F"][1][1][0]:
                 count += 1
             self.run_command_string("X")
         return count
 
     def get_yellow_edges(self):
+        """
+        Get the colors of the yellow edges
+        """
         logging.debug("cube.get_yellow_edges")
         edge_colors = ""
         for side in self.sides:
@@ -1171,6 +1263,9 @@ class cube:
         return edge_colors
 
     def solve_yellow_corners(self):
+        """
+        Solve the yellow corners
+        """
         logging.debug("cube.solve_yellow_corners()")
         counter = 0
         while True:
@@ -1205,16 +1300,16 @@ class cube:
             elif len(matched_corners) == 4:
                 return True
             else:
-                # FIXME bug1.cube gets here, it seems to have 2 matching corners, which shouldn't be possible
-                # print("How did we get here?")
                 logging.debug("cube.solve_yellow_corners: We shouldn't get here!")
-                pass
         return False
 
     def orient_yellow_corners(self):
-        logging.debug(f"orient_yellow_corners()")
+        """
+        Orient the yellow corners
+        """
+        logging.debug("orient_yellow_corners()")
         self.orient_cube()
-        top_corners = [("U", (0, 0)), ("U", (0, 2)), ("U", (2, 0)), ("U", (2, 2))]
+        # top_corners = [("U", (0, 0)), ("U", (0, 2)), ("U", (2, 0)), ("U", (2, 2))]
         counter = 0
         while self.up_yellow_corner_count() < 4:
             counter += 1
@@ -1230,6 +1325,9 @@ class cube:
         return self.check_yellow_corners()
 
     def check_yellow_corners(self):
+        """
+        Check if the yellow corners are in the right place
+        """
         logging.debug("cube.check_yellow_corners()")
         self.orient_cube()
         # are all the white corners facing down
@@ -1255,47 +1353,44 @@ class cube:
         return True
 
     def up_yellow_corner_count(self):
+        """
+        Count the number of yellow corners
+        """
         logging.debug("cube.up_yellow_corner_count()")
         top_corners = [("U", (0, 0)), ("U", (0, 2)), ("U", (2, 0)), ("U", (2, 2))]
         count = 0
         for corner in top_corners:
             if self.cube[corner[0]][corner[1][0]][corner[1][1]][0] == "Y":
                 count += 1
-        logging.debug(f"up_yellow_corner_count = {count}")
+        logging.debug("up_yellow_corner_count = %d", count)
         return count
 
     def solve(self):
+        """
+        Solve the cube
+        """
         logging.debug("cube.solve")
-        solved = False
-        failed_step = None
-        if self.solve_white_cross():
-            if self.solve_white_corners():
-                if self.solve_second_layer():
-                    if self.solve_yellow_cross():
-                        if self.solve_yellow_edges():
-                            if self.solve_yellow_corners():
-                                if self.orient_yellow_corners():
-                                    solved = True
-                                else:
-                                    failed_step = "orient_yellow_corners"
-                            else:
-                                failed_step = "solve_yellow_corners"
-                        else:
-                            failed_step = "solve_yellow_edges"
-                    else:
-                        failed_step = "solve_yellow_cross"
-                else:
-                    failed_step = "solve_second_layer"
-            else:
-                failed_step = "solve_white_corners"
-        else:
-            failed_step = "solve_white_cross"
-        return solved, failed_step
+        steps = [
+            ("solve_white_cross", self.solve_white_cross),
+            ("solve_white_corners", self.solve_white_corners),
+            ("solve_second_layer", self.solve_second_layer),
+            ("solve_yellow_cross", self.solve_yellow_cross),
+            ("solve_yellow_edges", self.solve_yellow_edges),
+            ("solve_yellow_corners", self.solve_yellow_corners),
+            ("orient_yellow_corners", self.orient_yellow_corners),
+        ]
+
+        for step_name, step_func in steps:
+            if not step_func():
+                return False, step_name
+
+        return True, None
 
     def clock(self):
+        """
+        Solve the cube using the clock method
+        """
         logging.debug("cube.clock")
-        solved = False
-        failed_step = None
         steps = [
             ("solve_white_cross", self.solve_white_cross),
             ("solve_white_corners", self.solve_white_corners),
@@ -1310,7 +1405,6 @@ class cube:
         for step_name, step_func in steps:
             start_time = time.time()
             if not step_func():
-                failed_step = step_name
                 break
             end_time = time.time()
             time_taken = (end_time - start_time) * 1000  # convert to milliseconds
@@ -1320,8 +1414,4 @@ class cube:
         end_time = time.time()
         time_taken = (end_time - all_start_time) * 1000
         print(f"Total took {time_taken:.2f} ms")
-
-        if failed_step is None:
-            solved = True
-
         return time_taken

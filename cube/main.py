@@ -8,13 +8,12 @@ logging.basicConfig(level=logging.INFO)
 
 def handle_debug_command(mycube, command):
 
-    if mycube.get_debug():
+    if mycube.cfg['debug']:
         mycube.set_debug(False)
         logging.info("Debug disabled")
     else:
         mycube.set_debug(True)
         logging.info("Debug enabled")
-
 
 def handle_rotate_command(mycube, command):
     clockwise = True
@@ -74,7 +73,7 @@ def handle_new_command(mycube, command):
         cube_type = int(commands[1])
     # these need to replace the mycube object that was passed in, I don't think they will like this
     if cube_type == 1:
-        mycube = cube.cube()
+        mycube = cube.Cube()
     elif cube_type == 2:
         mycube = cube2.Cube()
     return mycube
@@ -109,7 +108,7 @@ def print_help(*args):
 
 
 def main_loop():
-    mycube = cube.cube()
+    mycube = cube.Cube()
     command_handlers = {
         "debug": handle_debug_command,
         "scramble": lambda mycube, command: mycube.scramble(),

@@ -1266,58 +1266,70 @@ class Cube:
             else:
                 self.orient_cube(square2["center"])
 
+        def orient_yellow_edge(piece):
+            """
+            sub function to orient the yellow edge
+            """
+            # find the square that is not yellow
+            square = {}
+            for square in piece:
+                if square["center"] != "Y":
+                    self.orient_cube(square["color"])
+                    break
+            # self.print()
+            sentinel = 0
+            while square["color"] != square["center"]:
+                sentinel += 1
+                if sentinel > 4:
+                    logging.warning("all 4 sides tried")
+                    break
+                self.run_command_string("U")
+            colors = self.side_colors
+            idx = colors.find(square["color"])
+            idx_left = idx - 1
+            if idx_left < 0:
+                idx_left += len(colors)
+            left = colors[idx_left]
+            idx_right = idx + 1
+            if idx_right == len(colors):
+                idx_right = 0
+            right = colors[idx_right]
+            if left in [square2["color"] for square2 in piece]:
+                # self.print()
+                self.run_command_string("U',L',U,L,U,F,U',F'")
+            elif right in [square2["color"] for square2 in piece]:
+                # self.print()
+                self.run_command_string("U,R,U',R',U',F',U,F")
+
+        def swap_edges(square, square2):
+            """
+            sub function to swap the edges
+            """
+            orient_edge(square, square2)
+            self.run_command_string("U,R,U',R',U',F',U,F")
+
+
         while not self.check_second_layer():
-            pieces = self.get_pieces("RGOB", ["edges"], False)
-            for piece in pieces:
+            for piece in self.get_pieces("RGOB", ["edges"], False):
                 if "Y" in [square["center"] for square in piece]:
-                    square = {}
-                    for square in piece:
-                        if square["center"] != "Y":
-                            self.orient_cube(square["color"])
-                            break
-                    # self.print()
-                    sentinel = 0
-                    while square["color"] != square["center"]:
-                        sentinel += 1
-                        if sentinel > 4:
-                            logging.warning("all 4 sides tried")
-                            break
-                        self.run_command_string("U")
-                    colors = self.side_colors
-                    idx = colors.find(square["color"])
-                    idx_left = idx - 1
-                    if idx_left < 0:
-                        idx_left += len(colors)
-                    left = colors[idx_left]
-                    idx_right = idx + 1
-                    if idx_right == len(colors):
-                        idx_right = 0
-                    right = colors[idx_right]
-                    if left in [square2["color"] for square2 in piece]:
-                        # self.print()
-                        self.run_command_string("U',L',U,L,U,F,U',F'")
-                    elif right in [square2["color"] for square2 in piece]:
-                        # self.print()
-                        self.run_command_string("U,R,U',R',U',F',U,F")
+                    orient_yellow_edge(piece)
                 else:
                     square, square2 = piece
+                    # does the square match the face center
                     if square["color"] != square["center"]:
+                        # does it match the other face center
                         if square["color"] != square2["center"]:
                             # piece doesn't go here
-                            orient_edge(square, square2)
-                            # self.print()
-                            self.run_command_string("U,R,U',R',U',F',U,F")
+                            swap_edges(square, square2)
                         else:
                             # flip it
                             orient_edge(square, square2)
-                            # self.print()
                             self.run_command_string(
                                 "U,R,U',R',U',F',U,F,U,U,U,R,U',R',U',F',U,F"
                             )
                     elif square2["color"] != square2["center"]:
                         # piece doesn't go here
-                        orient_edge(square, square2)
-                        self.run_command_string("U,R,U',R',U',F',U,F")
+                        swap_edges(square, square2)
         return self.check_second_layer()
 
     def check_second_layer(self):
