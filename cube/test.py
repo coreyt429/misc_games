@@ -1,3 +1,12 @@
+"""
+This is a test file to compare the performance of Cube 1 and Cube 2.
+The test will run 1000 iterations, where in each iteration:
+1. A cube is scrambled and saved to a file.
+2. The cube is loaded from the file and solved.
+The time taken for each operation is recorded.
+The results will be printed at the end, showing how many times each cube was faster.
+"""
+
 import cube2
 import cube
 

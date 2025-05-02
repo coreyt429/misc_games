@@ -1,21 +1,36 @@
+"""
+This is a simple command line interface for a Rubik's Cube solver.
+It allows the user to interact with the cube, perform various
+operations, and test the solver's performance.
+"""
+
+import sys
+import time
+import logging
 import cube
 import cube2
-import logging
-import time
 
 logging.basicConfig(level=logging.INFO)
 
 
-def handle_debug_command(mycube, command):
-
-    if mycube.cfg['debug']:
+def handle_debug_command(mycube, command=None):
+    """
+    Toggle debug mode for the cube.
+    """
+    if command:
+        print(f"I don't know what to do with {command}")
+    if mycube.cfg["debug"]:
         mycube.set_debug(False)
         logging.info("Debug disabled")
     else:
         mycube.set_debug(True)
         logging.info("Debug enabled")
 
+
 def handle_rotate_command(mycube, command):
+    """
+    Rotate the cube based on the command.
+    """
     clockwise = True
     if "'" in command:
         clockwise = False
@@ -28,12 +43,15 @@ def handle_rotate_command(mycube, command):
 
 
 def handle_test_command(mycube, command):
+    """
+    Run a series of tests on the cube.
+    """
     test_count = int(command.split(" ")[1])
     successful = 0
     solved = False
     failure_steps = {}
     start_time = time.time()
-    for test_idx in range(test_count):
+    for _ in range(test_count):
         solved = False
         mycube.scramble()
         solved, failed_step = mycube.solve()
@@ -59,14 +77,23 @@ def handle_test_command(mycube, command):
 
 
 def handle_save_command(mycube, command):
+    """
+    Save the current state of the cube to a file.
+    """
     mycube.save(command.split(" ", 1)[1])
 
 
 def handle_load_command(mycube, command):
+    """
+    Load a saved state of the cube from a file.
+    """
     mycube.load(command.split(" ", 1)[1])
 
 
 def handle_new_command(mycube, command):
+    """
+    Create a new cube of the specified type.
+    """
     cube_type = 1
     commands = command.split(" ")
     if len(commands) == 2:
@@ -79,7 +106,11 @@ def handle_new_command(mycube, command):
     return mycube
 
 
-def print_help(*args):
+def print_help(**args):
+    """
+    Print the help message with available commands.
+    """
+    logging.debug("print_help(%s)", args)
     print("Available commands:")
     print("  debug - Toggle debug mode")
     print("  scramble - Scramble the cube")
@@ -108,6 +139,9 @@ def print_help(*args):
 
 
 def main_loop():
+    """
+    Main loop for the command line interface.
+    """
     mycube = cube.Cube()
     command_handlers = {
         "debug": handle_debug_command,
@@ -140,7 +174,8 @@ def main_loop():
         "solve": lambda mycube, command: mycube.solve(),
         "superflip": lambda mycube, command: mycube.superflip(),
         "crosses": lambda mycube, command: mycube.run_command_string(
-            "U,R,U',L',U,R',U',L,U,U,R,U',L',U,R',U',L,U',T,T,U,R,U',L',U,R',U',L,U,U,R,U',L',U,R',U',L,U',T,T"
+            "U,R,U',L',U,R',U',L,U,U,R,U',L',U,R',U',L,U',T,T,",
+            "U,R,U',L',U,R',U',L,U,U,R,U',L',U,R',U',L,U',T,T",
         ),
         "test": handle_test_command,
         "save": handle_save_command,
@@ -148,8 +183,8 @@ def main_loop():
         "new": handle_new_command,
         "h": print_help,
         "help": print_help,
-        "quit": lambda mycube, command: exit(),
-        "q": lambda mycube, command: exit(),
+        "quit": lambda mycube, command: sys.exit(),
+        "q": lambda mycube, command: sys.exit(),
     }
 
     while True:
@@ -167,7 +202,7 @@ def main_loop():
                 else:
                     handler(mycube, command)
             else:
-                logging.warning(f"Unknown command: {command}")
+                logging.warning("Unknown command: %s", command)
 
 
 if __name__ == "__main__":
