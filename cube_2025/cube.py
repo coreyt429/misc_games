@@ -7,6 +7,8 @@ This module only handles cube movements, and does not include any solving algori
 """
 
 import logging
+from random import choice
+from collections import deque
 
 FACES = ["U", "D", "L", "R", "F", "B"]
 COLORS = ["W", "Y", "G", "B", "R", "O"]
@@ -21,28 +23,83 @@ class Cube:
     def __init__(self, **kwargs):
         """
         Initialize the cube with size n x n.
+        Parameters:
+        - size: The size of the cube (default is 3 for a 3x3 cube).
+        - cube: A state string representing the cube's current state (optional).
+        - debug: A boolean flag to enable debug logging (default is False).
         """
         self.logger = logging.getLogger(__name__)
         self.size = kwargs.get("size", 3)
-        self.moves = kwargs.get("moves", 0)
-        self.history = kwargs.get("history", [])
         self.debug = kwargs.get("debug", False)
+        # init cube in solved state
+        self.cube = {}
+        for face_idx, face in enumerate(FACES):
+            self.cube[face] = []
+            for idx in range(self.size**2):
+                self.cube[face].append({"color": COLORS[face_idx], "index": idx})
         if "cube" in kwargs:
-            self.cube = kwargs["cube"]
-        else:
-            self.cube = {}
-            for face_idx, face in enumerate(FACES):
-                self.cube[face] = []
-                for idx in range(self.size**2):
-                    self.cube[face].append({"color": COLORS[face_idx], "index": idx})
-        self.solved_state = self.state()
+            self.cube = self.load(kwargs["cube"])
+        self.solved_state = self._solved_state()
+
+    def load(self, state):
+        """
+        Load a cube state from a string representation.
+        The string should be 6 * n^2 characters long,
+        representing the colors of the stickers on each face.
+        Note, while this will load a debug string or normal string,
+        a debug string is preffered for loading.
+        """
+        self.logger.debug("load: %s", state)
+        # load non_debug string
+        states = [char for char in state if char in COLORS]
+        if "0" in state:
+            # load debug string
+            states = [state[i : i + 2] for i in range(0, len(state), 2)]
+        self.size = int((len(states) / 6) ** 0.5)
+        if self.size < 2:
+            raise ValueError(f"Invalid cube size {self.size}: int({len(states)} / 6)")
+        if len(states) != 6 * self.size**2:
+            raise ValueError(
+                f"Invalid cube state length {len(states)} for size {self.size}"
+            )
+        cube = {}
+        for face in FACES:
+            cube[face] = []
+            for idx in range(self.size**2):
+                square = states.pop(0)
+                color = square[0]
+                square_idx = idx
+                if len(square) > 1:
+                    square_idx = int(square[1:])
+                cube[face].append({"color": color, "index": square_idx})
+        return cube
+
+    def _solved_state(self):
+        """
+        Calculate the solved state of the cube.
+        The solved state is a hash of the cube's current state.
+        """
+        solve_state = ""
+        for color in COLORS:
+            for idx in range(self.size**2):
+                solve_state += color + str(idx)
+        return hash(solve_state)
+
+    def scramble(self, moves=20):
+        """
+        Scramble the cube by performing a series of random rotations.
+        The number of moves can be specified (default is 20).
+        """
+        for _ in range(moves):
+            face = choice(FACES)
+            self.rotate_face(face, clockwise=choice([True, False]))
 
     def is_solved(self):
         """
         Check if the cube is in the solved state.
         The cube is considered solved if all stickers on each face are the same color.
         """
-
+        self.logger.debug("is_solved: %s == %s", self.solved_state, hash(self))
         return self.solved_state == hash(self)
 
     def state(self):
@@ -56,6 +113,17 @@ class Cube:
                 for face in FACES
             ]
         )
+
+    def __hash__(self):
+        """
+        Return a hash of the cube's current state.
+        This is useful for comparing cube states or storing them in sets/dictionaries.
+        """
+        debug = self.debug
+        self.debug = True
+        cube_str = str(self)
+        self.debug = debug
+        return hash(str(cube_str))
 
     def __str__(self):
         """
@@ -79,6 +147,16 @@ class Cube:
                 for face in FACES
             ]
         )
+
+    def __repr__(self):
+        """
+        String representation of the cube.
+        """
+        debug = self.debug
+        self.debug = True
+        cube_str = str(self)
+        self.debug = debug
+        return f"Cube(size={self.size}, cube='{cube_str}', debug={self.debug})"
 
     def _rotate_face(self, face, clockwise=True):
         """
@@ -176,25 +254,50 @@ class Cube:
         self.logger.debug("_rotate_slice: %s %s %s", axis, index, clockwise)
         size = self.size
         face_map = {
-            "x": {
-                "U": [i * size + index for i in range(size)],
-                "B": [i * size + (size - 1 - index) for i in range(size)],
-                "D": [i * size + index for i in range(size)],
-                "F": [i * size + index for i in range(size)],
-            },
             "y": {
-                "L": [index * size + i for i in range(size)],
-                "B": [index * size + i for i in range(size)],
-                "R": [index * size + i for i in range(size)],
-                "F": [index * size + i for i in range(size)],
+                # 0, 1, 2 for index 0, size 3
+                "F": [i + (size * index) for i in range(size)],
+                "L": [i + (size * index) for i in range(size)],
+                "B": [i + (size * index) for i in range(size)],
+                "R": [i + (size * index) for i in range(size)],
             },
             "z": {
-                "U": [i * size + index for i in range(size)],
-                "R": [index * size + i for i in range(size)],
-                "D": [i * size + index for i in range(size)],
-                "L": [index * size + i for i in range(size)],
+                # 6, 7, 8 for index 0, size 3
+                "U": [i + ((size**2 - (index * size)) - size) for i in range(size)],
+                # 0, 3, 6 for index 0, size 3
+                "R": [i * size + index for i in range(size)],
+                # 0, 1, 2 for index 0, size 3
+                "D": [i + (size * index) for i in range(size)],
+                # 6, 3, 0 for index 0, size 3
+                "L": list(reversed([i * size + index for i in range(size)])),
+            },
+            "x": {
+                # 6, 3, 0 for index 0, size 3,
+                "U": list(reversed([i * size + index for i in range(size)])),
+                # 2, 5, 8 for index 0, size 3
+                "B": [i * size + (size - 1 - index) for i in range(size)],
+                # 6, 3, 0 for index 0, size 3,
+                "D": list(reversed([i * size + index for i in range(size)])),
+                # 6, 3, 0 for index 0, size 3,
+                "F": list(reversed([i * size + index for i in range(size)])),
             },
         }
+        faces = face_map[axis]
+        row = deque()
+        for face, squares in faces.items():
+            for idx in squares:
+                row.append(self.cube[face][idx])
+        scalar = 1 if clockwise else -1
+        # the last index we will reference from the opposite side
+        if index == size - 1:
+            scalar = -scalar
+        # x axis moves seem reversed, so let's reverse the scalar
+        if axis == "x":
+            scalar = -scalar
+        row.rotate(scalar * size)
+        for face, squares in faces.items():
+            for idx in squares:
+                self.cube[face][idx] = row.popleft()
         self.logger.debug("_rotate_slice face_map: %s", face_map)
 
     def rotate_face(self, face, clockwise=True):
@@ -207,19 +310,14 @@ class Cube:
         self._rotate_face(face, clockwise)
         # rotate the stickers on the adjacent faces
         slices = {
-            "U": ("z", 0),
-            "D": ("z", self.size - 1),
-            "L": ("y", 0),
-            "R": ("y", self.size - 1),
-            "F": ("x", 0),
-            "B": ("x", self.size - 1),
+            "U": ("y", 0),
+            "D": ("y", self.size - 1),
+            "L": ("x", 0),
+            "R": ("x", self.size - 1),
+            "F": ("z", 0),
+            "B": ("z", self.size - 1),
         }
         self._rotate_slice(*slices[face], clockwise)
-        self.moves += 1
-        # FIXME: decision point, should history store moves, or state?
-        # if moves, then we likely need to add cube rotations as well
-        # maybe the same if state.
-        self.history.append((face, clockwise))
 
 
 if __name__ == "__main__":
