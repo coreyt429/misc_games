@@ -78,7 +78,8 @@ def print_color_cube(state_string):
     """
     Prints the cube in a formatted manner with colors.
     """
-
+    if not isinstance(state_string, str):
+        state_string = str(state_string)
     print()
     for row in state_string_to_rows(state_string):
         row_string = ""

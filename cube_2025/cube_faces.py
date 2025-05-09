@@ -15,245 +15,6 @@ COLORS = ["W", "Y", "G", "B", "R", "O"]
 FACE_COLORS = dict(zip(FACES, COLORS))
 CORNERS = ["UFL", "UFR", "UBR", "UBL", "DFL", "DFR", "DBR", "DBL"]
 EDGES = ["UF", "UR", "UB", "UL", "DF", "DR", "DB", "DL", "FL", "FR", "BL", "BR"]
-CORNER_FACE_ORDER = {
-    "UFR": ('U', 'F', 'R'),
-    "UFL": ('U', 'L', 'F'),
-    "UBL": ('U', 'B', 'L'),
-    "UBR": ('U', 'R', 'B'),
-    "DFR": ('D', 'F', 'R'),
-    "DFL": ('D', 'L', 'F'),
-    "DBL": ('D', 'B', 'L'),
-    "DBR": ('D', 'R', 'B'),
-}
-FACE_POSITIONS = {
-    "U": {
-        0: "UBL",
-        1: "UB",
-        2: "UBR",
-        3: "UL",
-        4: "U",
-        5: "UR",
-        6: "UFL",
-        7: "UF",
-        8: "UFR",
-    },
-    "D": {
-        0: "DFL",
-        1: "DF",
-        2: "DFR",
-        3: "DL",
-        4: "D",
-        5: "DR",
-        6: "DBL",
-        7: "DB",
-        8: "DBR",
-    },
-    "L": {
-        0: "UBL",
-        1: "UL",
-        2: "UFL",
-        3: "BL",
-        4: "L",
-        5: "FL",
-        6: "DBL",
-        7: "DL",
-        8: "DFL",
-    },
-    "R": {
-        0: "UFR",
-        1: "UR",
-        2: "UBR",
-        3: "FR",
-        4: "R",
-        5: "BR",
-        6: "DFR",
-        7: "DR",
-        8: "DBR",
-    },
-    "F": {
-        0: "UFL",
-        1: "UF",
-        2: "UFR",
-        3: "FL",
-        4: "F",
-        5: "FR",
-        6: "DFL",
-        7: "DF",
-        8: "DFR",
-    },
-    "B": {
-        0: "UBR",
-        1: "UB",
-        2: "UBL",
-        3: "BR",
-        4: "B",
-        5: "BR",
-        6: "DBR",
-        7: "DB",
-        8: "DBL",
-    },
-}
-
-FACE_ROTATIONS = {
-    # (axis, clockwise)
-    'U': ("y", True),
-    'D': ("y", False),
-    'L': ("x", False),
-    'R': ("x", True),
-    'F': ("z", True),
-    'B': ("z", False)
-}
-
-ROTATION_MAP = {
-    "x": {
-        "UFR": "UBR",
-        "UF": "UB",
-        "UFL": "UBL",
-        "UL": "BL",
-        "U": "B",
-        "UR": "BR",
-        "UBL": "DBL",
-        "UB": "DB",
-        "UBR": "DBR",
-        "DFR": "UFR",
-        "DF": "UF",
-        "DFL": "UFL",
-        "DL": "FL",
-        "D": "F",
-        "DR": "FR",
-        "DBL": "DFL",
-        "DB": "DF",
-        "DBR": "DFR",
-        "FL": "UL",
-        "F": "U",
-        "FR": "UR",
-        "L": "L",
-        "R": "R",
-        "BL": "DL",
-        "B": "D",
-        "BR": "DR",
-    },
-    "y": {
-        "UFR": "UFL",
-        "UF": "UL",
-        "UFL": "UBL",
-        "UL": "UB",
-        "U": "U",
-        "UR": "UF",
-        "UBL": "UBR",
-        "UB": "UR",
-        "UBR": "UFR",
-        "DFR": "DFL",
-        "DF": "DL",
-        "DFL": "DBL",
-        "DL": "DB",
-        "D": "D",
-        "DR": "DF",
-        "DBL": "DBR",
-        "DB": "DR",
-        "DBR": "DFR",
-        "FL": "BL",
-        "F": "L",
-        "FR": "FL",
-        "L": "B",
-        "R": "F",
-        "BL": "BR",
-        "B": "R",
-        "BR": "FR",
-    },
-    "z": {
-        "UFR": "DFR",
-        "UF": "FR",
-        "UFL": "UFR",
-        "UL": "UR",
-        "U": "R",
-        "UR": "DR",
-        "UBL": "UBR",
-        "UB": "BR",
-        "UBR": "DBR",
-        "DFR": "DFL",
-        "DF": "FL",
-        "DFL": "UFL",
-        "DL": "UL",
-        "D": "L",
-        "DR": "DL",
-        "DBL": "UBL",
-        "DB": "BL",
-        "DBR": "DBL",
-        "FL": "UF",
-        "F": "F",
-        "FR": "DF",
-        "L": "U",
-        "R": "D",
-        "BL": "UB",
-        "B": "B",
-        "BR": "DB",
-    },
-}
-
-ROTATION_MAP_INVERSE = {
-    "x": {value:key for key, value in ROTATION_MAP["x"].items()},
-    "y": {value:key for key, value in ROTATION_MAP["y"].items()},
-    "z": {value:key for key, value in ROTATION_MAP["z"].items()},
-}
-
-def get_axis_map(axis, clockwise=True):
-    """
-    Get the axis map for the cubie.
-    The axis can be 'x', 'y', or 'z'.
-    """
-    if clockwise:
-        return ROTATION_MAP[axis]
-    else:
-        return ROTATION_MAP_INVERSE[axis]
-
-class Cubie:
-    """
-    Class representing a single cubie in the cube.
-    Each cubie has a color and an index.
-    """
-
-
-    def rotate(self, axis, clockwise, axis_map=None):
-        """
-        Rotate the cubie around a specified face.
-        The face can be 'U', 'D', 'L', 'R', 'F', or 'B'.
-        face=W specifies whole cube
-        """
-        if axis_map is None:
-            axis_map = get_axis_map(axis, clockwise)
-        # rotate the cubie
-        new_position = axis_map[self.position]
-        self.position = new_position
-        # rotate the cubie orientation
-        # self.orientation = (self.orientation + 1) % len(self.color)
-        
-
-    def __init__(self, position, color, orientation):
-        self.position = position
-        self.color = color
-        self.orientation = orientation
-
-    def __repr__(self):
-        return (
-            f"Cubie(color={self.color}, "
-            + f"position={self.position}, "
-            + f"orientation={self.orientation})"
-        )
-
-    def __str__(self):
-        return f"{self.color} {self.position} {self.orientation}"
-
-    def to_dict(self):
-        """
-        dict representation of the cubie
-        """
-        return {
-            "position": self.position,
-            "color": self.color,
-            "orientation": self.orientation,
-        }
-
 
 class Cube:
     """
@@ -288,33 +49,12 @@ class Cube:
         Reset the cube to its solved state.
         This method is useful for resetting the cube after scrambling or solving.
         """
-        self.cubies = []
-        for corner in CORNERS:
-            self.cubies.append(
-                Cubie(
-                    position=corner,
-                    color=tuple(COLORS[FACES.index(face)] for face in CORNER_FACE_ORDER[corner]),
-                    orientation=0,
-                )
-            )
-        if self.size == 3:
-            for edge in EDGES:
-                self.cubies.append(
-                    Cubie(
-                        position=edge,
-                        color=tuple(COLORS[FACES.index(face)] for face in edge),
-                        orientation=0,
-                    )
-                )
-            for center in FACES:
-                self.cubies.append(
-                    Cubie(
-                        position=center,
-                        color=tuple(COLORS[FACES.index(face)] for face in center),
-                        orientation=0,
-                    )
-                )
-
+        self.cube = {}
+        for face_idx, face in enumerate(FACES):
+            self.cube[face] = []
+            for idx in range(self.size**2):
+                self.cube[face].append({"color": COLORS[face_idx], "index": idx})
+        
     def load(self, state):
         """
         Load a cube state from a string representation.
@@ -322,7 +62,6 @@ class Cube:
         representing the colors of the stickers on each face.
         Note, while this will load a debug string or normal string,
         a debug string is preffered for loading.
-        # FIXME: rework to use cubies.  need to fully understand cubie orientation for loading
         """
         self.logger.debug("load: %s", state)
         # load non_debug string
@@ -347,7 +86,7 @@ class Cube:
                 if len(square) > 1:
                     square_idx = int(square[1:])
                 self.cube[face].append({"color": color, "index": square_idx})
-
+        
         return self.cube
 
     def _solved_state(self):
@@ -378,53 +117,11 @@ class Cube:
         self.logger.debug("is_solved: %s == %s", self.solved_state, hash(self))
         return self.solved_state == hash(self)
 
-    def get_sticker(self, face, index):
-        """
-        Get the sticker at a specific face and index.
-        This is useful for accessing specific stickers on the cube.
-        """
-        position = FACE_POSITIONS[face][index]
-        cubie = self.get_cubie(position)
-        if cubie is None:
-            raise ValueError(f"Invalid cubie position {position}")
-        # print(f"cubie.color: {cubie.color}")
-        # print(f"cubie.position: {cubie.position}")
-        # print(f"cubie.orientation: {cubie.orientation}")
-        # print(f"position.index(face): {position.index(face)}")
-        if len(cubie.color) == 3:
-            return cubie.color[(CORNER_FACE_ORDER[position].index(face) + cubie.orientation) % len(cubie.color)]
-        return cubie.color[(position.index(face) + cubie.orientation) % len(cubie.color)]
-
-    def get_cubie(self, position):
-        """
-        Get the cubie at a specific position.
-        This is useful for accessing specific cubies on the cube.
-        """
-        for cubie in self.cubies:
-            if cubie.position == position:
-                return cubie
-        return None
-    
-    def get_cubies(self, face_filter=None, color_filter=None):
-        """
-        Get a list of cubies that match the specified filters.
-        The filters can be face_filter (a list of faces) or color_filter (a list of colors).
-        """
-        cubies = []
-        for cubie in self.cubies:
-            if face_filter and not any(face in cubie.position for face in face_filter):
-                continue
-            if color_filter and not any(color in cubie.color for color in color_filter):
-                continue
-            cubies.append(cubie)
-        return cubies
-
     def state(self):
         """
         Return a string representation of the cube's current state.
         This is useful for comparing cube states or storing them in sets/dictionaries.
         """
-        # FIXME: rework to use cubies.
         return "".join(
             [
                 "".join([sticker["color"] for sticker in self.cube[face]])
@@ -447,11 +144,24 @@ class Cube:
         """
         Return a string representation of the cube for printing.
         """
-        state_string = ""
-        for face in FACES:
-            for idx in range(self.size**2):
-                state_string += self.get_sticker(face, idx)
-        return state_string
+        if self.debug:
+            return "".join(
+                [
+                    "".join(
+                        [
+                            sticker["color"] + str(sticker["index"])
+                            for sticker in self.cube[face]
+                        ]
+                    )
+                    for face in FACES
+                ]
+            )
+        return "".join(
+            [
+                "".join([sticker["color"] for sticker in self.cube[face]])
+                for face in FACES
+            ]
+        )
 
     def __repr__(self):
         """
@@ -461,10 +171,23 @@ class Cube:
         self.debug = True
         cube_str = str(self)
         self.debug = debug
-        return (
-            f"Cube(size={self.size}, state='{cube_str}', "
-            f"debug={self.debug} cubies={[repr(cubie) for cubie in self.cubies]})"
-        )
+        return f"Cube(size={self.size}, state='{cube_str}', debug={self.debug})"
+
+    def _rotate_face(self, face, clockwise=True):
+        """
+        Rotate a face of the cube clockwise or counterclockwise.
+        The face is represented by its index in the FACES list.
+        """
+        self.logger.debug("_rotate_face: %s clockwise: %s", face, clockwise)
+        self.logger.debug("_rotate_face: %s", self.cube[face])
+        size = self.size
+        grid = [self.cube[face][i * size : (i + 1) * size] for i in range(size)]
+        if clockwise:
+            rotated = [list(row) for row in zip(*grid[::-1])]
+        else:
+            rotated = [list(row) for row in zip(*grid)][::-1]
+        self.cube[face] = [sticker for row in rotated for sticker in row]
+        self.logger.debug("_rotate_face: %s", self.cube[face])
 
     def rotate_cube(self, clockwise=True, axis="Y"):
         """
@@ -595,30 +318,26 @@ class Cube:
     def rotate_face(self, face, clockwise=True):
         """
         Rotate a face of the cube.
+        This method is not implemented yet.
         """
         self.logger.debug("rotate_face: %s clockwise: %s", face, clockwise)
-        (axis, mod_clockwise) = FACE_ROTATIONS[face]
-        if not mod_clockwise:
-            clockwise = not clockwise
-        axis_map = get_axis_map(axis, clockwise)
-        
-        for cubie in self.get_cubies(face_filter=[face]):
-            cubie.rotate(axis, clockwise, axis_map)
-        for cubie in self.get_cubies():
-            print(cubie)
-
-
+        # rotate the stickers on the face itself
+        self._rotate_face(face, clockwise)
+        # rotate the stickers on the adjacent faces
+        slices = {
+            "U": ("y", 0),
+            "D": ("y", self.size - 1),
+            "L": ("x", 0),
+            "R": ("x", self.size - 1),
+            "F": ("z", 0),
+            "B": ("z", self.size - 1),
+        }
+        self._rotate_slice(*slices[face], clockwise)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
     print("Run test_cube.py to test the Cube class.")
+    import json
     cube = Cube(size=3, debug=True)
-    for curr_cubie in cube.get_cubies(face_filter=["G", 'B']):
-        print(curr_cubie)
-    print(f"str(cube): {str(cube)}")
-    print(f"repr(cube): {repr(cube)}")
-    print(f"hash(cube): {hash(cube)}")
-    cube.rotate_face("U", clockwise=True)
-    for curr_cubie in cube.get_cubies():
-        print(curr_cubie)
+    for cubie in cube.cubies:
+        print(cubie)

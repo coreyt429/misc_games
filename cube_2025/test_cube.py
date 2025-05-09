@@ -101,7 +101,7 @@ test_states = {
         + "O0R7O2R3O4R5O6R1O8"
     ),
     "repr": (
-        "Cube(size=3, cube='W0W1W2W3W4W5W6W7W8"
+        "Cube(size=3, state='W0W1W2W3W4W5W6W7W8"
         + "Y0Y1Y2Y3Y4Y5Y6Y7Y8G0G1G2G3G4G5G6G7G8"
         + "B0B1B2B3B4B5B6B7B8R0R1R2R3R4R5R6R7R8"
         + "O0O1O2O3O4O5O6O7O8', debug=True)"
@@ -171,7 +171,7 @@ class TestCube(unittest.TestCase):
             # Check if the cube returns to the initial state
             self.assertEqual(str(cube), test_states["init"])
 
-    def test_scramble(self):
+    def test_scramble_and_reset(self):
         """
         Test the scramble function of the Cube class.
         Validates that the cube is scrambled and not in the initial state.
@@ -183,6 +183,10 @@ class TestCube(unittest.TestCase):
         cube.scramble()
         # Check if the cube is not in the initial state
         self.assertNotEqual(str(cube), initial_state)
+        # Reset the cube
+        cube.reset()
+        # Check if the cube returns to the initial state
+        self.assertEqual(str(cube), initial_state)
 
     def test_representation(self):
         """
@@ -222,7 +226,7 @@ class TestCube(unittest.TestCase):
         Validates that the cube loads the state correctly.
         """
         # Initialize the cube
-        cube = Cube(size=3, debug=True, cube=test_states["crosses"])
+        cube = Cube(size=3, debug=True, state=test_states["crosses"])
         # Check if the crosses are created correctly
         self.assertEqual(str(cube), test_states["crosses"])
 
