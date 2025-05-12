@@ -390,6 +390,15 @@ class Cubie:
     def __str__(self):
         return f"{self.color} {self.position} {self.orientation}"
 
+    def get_colors(self, color_filter=''):
+        """
+        Get the colors of the cubie.
+        This is useful for accessing the colors of the cubie.
+        """
+        if color_filter:
+            return [color for color in self.color if color not in color_filter]
+        return self.color
+
     def to_dict(self):
         """
         dict representation of the cubie
@@ -490,6 +499,18 @@ class Cube:
                 edges.append(cubie)
         return edges
 
+    def face_by_color(self, color):
+        """
+        Get the face of the cube by color.
+        This is useful for accessing the face of the cube by its color.
+        """
+        if color not in COLORS:
+            raise ValueError(f"Invalid color {color}: {COLORS}")
+        for face in FACES:
+            if color == self.get_sticker(face, 4):
+                return face
+        return None
+
     def face_color(self, face):
         """
         Get the color of a specific face.
@@ -519,6 +540,11 @@ class Cube:
         representing the colors of the stickers on each face.
         Note, while this will load a debug string or normal string,
         a debug string is preffered for loading.
+
+        FIXME: load is not always ordering colors correctly:
+        BWYBWOOGORYBRYYRBYOOGRGGBWGBYRBBGRBOWYWWRWWRYGOYOOGGRW
+        Cubie(color=('W', 'R') is Cubie(color=('R', 'W')
+        This breaks assumptions about the cube.
         """
         self.logger.debug("load: %s", state)
         # load non_debug string

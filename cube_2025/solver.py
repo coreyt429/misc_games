@@ -124,10 +124,12 @@ class Solver:
                     correct += 1
         return correct
 
-    def _align_white_edges(self, edges):
+    def _align_white_edges(self, edges=None):
         """
         Align the white edges to the top layer
         """
+        if edges is None:
+            edges = self.cube.edges(color_filter=["W"])
         max_correct = 0
         for _ in range(4):
             correct = self._correct_white_edge_count(edges)
@@ -178,6 +180,8 @@ class Solver:
         If they are flipped
         F'UL'U'
         """
+        if edges is None:
+            edges = self.cube.edges(color_filter=["W"])
         self._align_white_edges(edges)
         changed = False
         for edge in edges:
@@ -289,7 +293,7 @@ class Solver:
                 return False
         return True
 
-    def cross(self):
+    def cross_works_not_efficient(self):
         """
         Solve the cross on the first layer
         """
@@ -325,8 +329,149 @@ class Solver:
         # this cube is not finishing the cross
         return self._check_white_cross()
         
-            
+    def _cross_up_clear(self, face):
+        """
+        check to see if rotating a face will impact a correctly positioned
+        white edge
+        """
+        # get up edge of face
+        edge = self.cube.get_cubie(f"U{face}")
+        # if edge doesn't have white, we can move it
+        if not 'W' in edge.color:
+            return True
+        # if edge is not oriented, we can move it
+        if edge.orientation != 0:
+            return True
+        # if not the correct edge, we can move it
+        if self.cube.face_color(face) in edge.color:
+            return True
+        # lets not move it
+        return False
   
+    def cross(self):
+        """
+        2nd attempt to solve the cross on the first layer
+        """
+        self.orient_cube()
+        white_edges = self.cube.edges(color_filter=["W"])
+        self._align_white_edges(white_edges)
+        counter = 0
+        while not self._check_white_cross():
+            counter += 1
+            logging.debug("Iteration: %d", counter)
+            if counter > 100:
+                logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                print(self.cube)
+                break
+            
+            for edge in white_edges:
+                logging.debug("Considering edge %s", edge)
+                # 1: up:
+                logging.debug("edge.position[0] (%s) == 'U', %s", edge.position[0], edge.position[0] == 'U')
+                if edge.position[0] == 'U':
+                    logging.debug("Edge %s is in the up layer", edge)
+                    # a: white up
+                    if edge.orientation == 0:
+                        # is it in the right position?
+                        # does other color match center?
+                        if edge.color[1] == self.cube.get_sticker(edge.position[1], 4):
+                            logging.debug("Edge %s is in the right position", edge)
+                            # already in the right position
+                            continue
+                    # b: not white up or not in the right possition, send down
+                    logging.debug("Edge %s is not in the right position, send down", edge)
+                    for _ in range(2):
+                        self.cube.rotate_face(edge.position[1], clockwise=True)
+                logging.debug("edge.position (%s) != 'U' || 'D', %s", edge.position, 'U' not in edge.position and 'D' not in edge.position)
+                # if 'U' not in edge.position and 'D' not in edge.position:
+                #     # 2: middle
+                #     logging.debug("Edge %s is in the middle layer", edge)
+                #     # is it in the right position?
+                #     # does other color match center?
+                #     if edge.color[1] == self.cube.get_sticker(edge.position[1], 4):
+                #         logging.debug("Edge %s is in the right position", edge)
+                #         # already in the right position
+                #         continue
+                #     else:
+                #         logging.debug("Edge %s is not in the right position, send down", edge)
+                #         # a: other aligned
+                #         if edge.orientation == 0:
+                #             for _ in range(2):
+                #                 self.cube.rotate_face(edge.position[1], clockwise=True)
+                #         # b: not other aligned
+                #         else:
+                #             for _ in range(2):
+                #                 self.cube.rotate_face(edge.position[1], clockwise=False)
+
+                # 2: middle
+                if 'U' not in edge.position and 'D' not in edge.position:
+                    logging.debug("Edge %s is on the equator", edge)
+                    # a: other aligned
+                    logging.debug("position_index for %d is %d", edge.orientation, (edge.orientation + 1) % 2)
+                    other_color = edge.get_colors(color_filter='W')[0]
+                    other_face = edge.position[(edge.orientation + 1) % 2]
+                    logging.debug("%s == %s? %s", edge.get_colors('W'), self.cube.face_color(other_face), edge.get_colors('W') == self.cube.face_color(other_face))
+                    if other_color == self.cube.face_color(other_face):
+                        logging.debug("Edge %s is aligned", edge)
+                        self.cube.rotate_face(other_face, clockwise=True)
+                        if edge.position != f'U{other_face}':
+                            # undo
+                            self.cube.rotate_face(other_face, clockwise=False)
+                            # other direction
+                            self.cube.rotate_face(other_face, clockwise=False)
+                    # b: not other aligned
+                    else:
+                        logging.debug("Edge %s is not aligned", edge)
+                        other_color = edge.get_colors(color_filter='W')[0]
+                        other_face = edge.position[(edge.orientation + 1) % 2]
+                        while not self._cross_up_clear(other_face):
+                            logging.debug("Clearing face %s", other_face)
+                            self.cube.rotate_face('U')
+                        self.cube.rotate_face(other_face)
+                        if edge.position != f'D{other_face}':
+                            # undo
+                            self.cube.rotate_face(other_face, clockwise=False)
+                            # other direction
+                            self.cube.rotate_face(other_face, clockwise=False)
+                        # put up layer back
+                        self._align_white_edges()
+                
+                # 3: down
+                if edge.position[0] == 'D':
+                    logging.debug("Edge %s is in the down layer", edge)
+                    # is it in the right position?
+                    # does other color match center?
+                    while not edge.get_colors(color_filter='W')[0] == self.cube.face_color(edge.position[1]):
+                        logging.debug("Edge %s, non-white color is %s", edge, edge.get_colors(color_filter='W')[0])
+                        logging.debug("Edge %s is not in the right position, aligning", edge)
+                        self.cube.rotate_face('D', clockwise=True)
+                        logging.debug("Edge %s: %s == %s? %s", edge, edge.get_colors(color_filter='W')[0], self.cube.face_color(edge.position[1]), edge.get_colors(color_filter='W')[0] == self.cube.face_color(edge.position[1]))
+                    # a: white down
+                    if edge.orientation == 0:
+                        logging.debug("Edge %s white is down, send up", edge)
+                        # send up
+                        for _ in range(2):
+                            self.cube.rotate_face(edge.position[1], clockwise=True)
+                    # b: not white down
+                    else:
+                        other_color = edge.get_colors('W')[0]
+                        logging.debug("Edge %s is not white down, twist and send up", edge)
+                        # rotate down counter clockwise
+                        logging.debug("rotate down counter clockwise")
+                        self.cube.rotate_face('D', clockwise=False)
+                        # rotate up clockwise
+                        logging.debug("rotate up clockwise")
+                        self.cube.rotate_face('U', clockwise=True)
+                        # rotate other face counter clockwise
+                        logging.debug("rotate other face %s counter clockwise", self.cube.face_by_color(other_color))
+                        self.cube.rotate_face(''.join(edge.position).replace('D',''), clockwise=False)
+                        # rotate up counter clockwise
+                        logging.debug("rotate up counter clockwise")
+                        self.cube.rotate_face('U', clockwise=False)
+                        # rotate other face clockwise
+                        logging.debug("rotate other face %s clockwise", other_color)                       
+                        self.cube.rotate_face(self.cube.face_by_color(other_color), clockwise=True)     
+        return self._check_white_cross()
 
 
     def f2l(self):
@@ -371,16 +516,18 @@ if __name__ == "__main__":
         "cross": 0,
         "fail": 0
     }
-    # `solver.cube.load("GYYWWYRWWBWWOYRGOGROYGGWOGRROORBRBBOBRGBRYWGOBBYGOYWBY")
-    # solver.cross()`
-    # solver.cube.load("WWRWWWRWGWRBOYRGOGOGGGGYOGBWOYYBRYBOYBRBRORYOBRBGOYWBY")
-    # # solver.cube.rotate_face('U', clockwise=False)
-    # solver._align_white_edges(solver.cube.edges(color_filter=["W"]))
+    # solver.cube.scramble()
+    # # solver.cube.load("BWYBWOOGORYBRYYRBYOOGRGGBWGBYRBBGRBOWYWWRWWRYGOYOOGGRW")
     # solver.cross()
+    # # solver.cube.load("WWRWWWRWGWRBOYRGOGOGGGGYOGBWOYYBRYBOYBRBRORYOBRBGOYWBY")
+    # # # solver.cube.rotate_face('U', clockwise=False)
+    # # solver._align_white_edges(solver.cube.edges(color_filter=["W"]))
+    # # solver.cross()
     # print_color_cube(solver.cube)
     failures = set()
-    for idx in range(100000):
-        print(f"\rIteration: {idx}: {stats['cross']}/{stats['fail']}", end="", flush=True)
+    ITERATIONS = 1000
+    for idx in range(ITERATIONS):
+        print(f"\rIteration: {idx + 1}: {stats['cross']}/{stats['fail']}", end="", flush=True)
         solver.cube.reset()
         solver.cube.scramble()
         start_state = str(solver.cube)
@@ -391,6 +538,8 @@ if __name__ == "__main__":
             stats["fail"] += 1
             # print(f"Cross failed for {start_state}")
             failures.add(start_state)
+    print("\r" + " "*80 + "\r", end="", flush=True)
+    print_color_cube(solver.cube)
     print(f"{stats['cross']} crosses solved")
     print(f"{stats['fail']} crosses failed")
 
