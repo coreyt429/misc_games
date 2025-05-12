@@ -390,7 +390,7 @@ class Cubie:
     def __str__(self):
         return f"{self.color} {self.position} {self.orientation}"
 
-    def get_colors(self, color_filter=''):
+    def get_colors(self, color_filter=""):
         """
         Get the colors of the cubie.
         This is useful for accessing the colors of the cubie.
@@ -474,13 +474,15 @@ class Cube:
                     )
                 )
 
-    def centers(self):
+    def centers(self, color_filter=None):
         """
         Get the center cubies of the cube.
         This is useful for accessing the center cubies on the cube.
         """
         centers = []
         for cubie in self:
+            if color_filter and not any(color in cubie.color for color in color_filter):
+                continue
             if len(cubie.color) == 1:
                 centers.append(cubie)
         return centers
@@ -495,7 +497,6 @@ class Cube:
             if color_filter and not any(color in cubie.color for color in color_filter):
                 continue
             if len(cubie.color) == 2:
-
                 edges.append(cubie)
         return edges
 
@@ -651,8 +652,8 @@ class Cube:
         # corner
         if len(cubie.color) == 3:
             color_index = (
-                (CORNER_FACE_ORDER[position].index(face) + cubie.orientation) % len(cubie.color)
-            )
+                CORNER_FACE_ORDER[position].index(face) + cubie.orientation
+            ) % len(cubie.color)
         # edge
         if len(cubie.color) == 2:
             color_index = (position.index(face) + cubie.orientation) % len(cubie.color)

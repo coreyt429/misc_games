@@ -1,6 +1,7 @@
 """
 Module to solve a rubiks cube puzzle
 """
+
 import sys
 import json
 import logging
@@ -14,10 +15,12 @@ class Solver:
     Class to solve a rubiks cube puzzle
     """
 
-    def __init__(self, cube):
+    def __init__(self, cube=None):
         """
         Initialize the solver with a cube
         """
+        if cube is None:
+            cube = Cube(size=3)
         if not isinstance(cube, Cube):
             raise TypeError("cube must be a Cube")
         self.cube = cube
@@ -26,36 +29,34 @@ class Solver:
         """
         Orient the cube to a standard position
         """
-        centers = self.cube.centers()
+        move_map ={
+            'W': {
+                "U": (),
+                "L": ({"axis": "z", "clockwise": True},),
+                "R": ({"axis": "z", "clockwise": False},),
+                "F": ({"axis": "x", "clockwise": True},),
+                "B": ({"axis": "x", "clockwise": False},),
+                "D": (
+                    {"axis": "x", "clockwise": True}, 
+                    {"axis": "x", "clockwise": True},
+                ),
+            },
+            'R': {
+                "U": (),
+                "L": ({"axis": "y", "clockwise": False},),
+                "R": ({"axis": "y", "clockwise": True},),
+                "F": (),
+                "B": ({"axis": "y", "clockwise": True},{"axis": "y", "clockwise": True},),
+                "D": (),
+            }
+        }
+
         # Find the white center and orient it to the top
-        for center in centers:
-            if "W" in center.color:
-                if center.position in ['L']:
-                    self.cube.rotate_cube(axis="z", clockwise=True)
-                elif center.position in ['R']:
-                    self.cube.rotate_cube(axis="z", clockwise=False)
-                elif center.position in ['F']:
-                    self.cube.rotate_cube(axis="x", clockwise=True)
-                elif center.position in ['B']:
-                    self.cube.rotate_cube(axis="x", clockwise=False)
-                elif center.position in ['D']:
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                break
-        for center in centers:
-            if "R" in center.color:
-                if center.position in ['L']:
-                    self.cube.rotate_cube(axis="y", clockwise=False)
-                elif center.position in ['R']:
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                elif center.position in ['B']:
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                elif center.position in ['D']:
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                    self.cube.rotate_cube(axis="y", clockwise=True)
-                break
-        
+        for color in ['W', 'R']:
+            center = self.cube.centers(color_filter=[color])[0]
+            start_position = center.position
+            for move in move_map[color][start_position]:
+                self.cube.rotate_cube(**move)
         
     def count_edge_faces(self, edges, color):
         """
@@ -98,29 +99,29 @@ class Solver:
         """
         self._align_white_edges(edges)
         for edge in edges:
-            if edge.position[0] != 'D':
+            if edge.position[0] != "D":
                 continue
             if edge.orientation == 1:
                 continue
             if edge.color[1] != self.cube.face_color(edge.position[1]):
                 for _ in range(3):
-                    self.cube.rotate_face('D', clockwise=True)
+                    self.cube.rotate_face("D", clockwise=True)
                     if edge.color[1] == self.cube.face_color(edge.position[1]):
                         break
             face = edge.position[1]
             for _ in range(2):
                 self.cube.rotate_face(face, clockwise=True)
         self.orient_cube()
-    
+
     def _correct_white_edge_count(self, edges):
         """
         Check if the white edges are in the correct position
         """
         correct = 0
         for edge in edges:
-            if edge.position[0] == 'U':
+            if edge.position[0] == "U":
                 face = edge.position[1]
-                if self.cube.get_sticker(face,1) == self.cube.get_sticker(face,4):
+                if self.cube.get_sticker(face, 1) == self.cube.get_sticker(face, 4):
                     correct += 1
         return correct
 
@@ -136,20 +137,23 @@ class Solver:
             logging.debug("correct: %d, max_correct: %d", correct, max_correct)
             if correct > max_correct:
                 max_correct = correct
-            self.cube.rotate_face('U', clockwise=True)
+            self.cube.rotate_face("U", clockwise=True)
         correct = self._correct_white_edge_count(edges)
         logging.debug("equal? correct: %d, max_correct: %d", correct, max_correct)
         sentinel = 0
         while correct != max_correct:
             sentinel += 1
             if sentinel > 4:
-                logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                logging.warning(
+                    "Too many iterations, breaking out of the loop at line %d",
+                    __import__("inspect").currentframe().f_lineno,
+                )
                 print_color_cube(self.cube)
                 print(self.cube)
                 sys.exit(1)
                 break
             logging.debug("rotate? correct: %d, max_correct: %d", correct, max_correct)
-            self.cube.rotate_face('U', clockwise=True)
+            self.cube.rotate_face("U", clockwise=True)
             correct = self._correct_white_edge_count(edges)
 
         logging.debug("edges: %s", edges)
@@ -162,7 +166,7 @@ class Solver:
         self._align_white_edges(edges)
         changed = False
         for edge in edges:
-            if edge.position[0] != 'U':
+            if edge.position[0] != "U":
                 continue
             if edge.orientation == 1:
                 continue
@@ -185,29 +189,32 @@ class Solver:
         self._align_white_edges(edges)
         changed = False
         for edge in edges:
-            if edge.position[0] != 'U':
+            if edge.position[0] != "U":
                 continue
             if edge.orientation == 0:
                 continue
             counter = 0
-            while 'F' not in edge.position:
+            while "F" not in edge.position:
                 counter += 1
                 if counter > 10:
-                    logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                    logging.warning(
+                        "Too many iterations, breaking out of the loop at line %d",
+                        __import__("inspect").currentframe().f_lineno,
+                    )
                     break
-                self.cube.rotate_cube(axis='y', clockwise=True)
+                self.cube.rotate_cube(axis="y", clockwise=True)
             changed = True
             # F'
-            self.cube.rotate_face('F', clockwise=False)
+            self.cube.rotate_face("F", clockwise=False)
             # U
-            self.cube.rotate_face('U', clockwise=True)
+            self.cube.rotate_face("U", clockwise=True)
             # L'
-            self.cube.rotate_face('L', clockwise=False)
+            self.cube.rotate_face("L", clockwise=False)
             # U'
-            self.cube.rotate_face('U', clockwise=False)
+            self.cube.rotate_face("U", clockwise=False)
             self.orient_cube()
             return changed
-    
+
     def _down_edges_flipped(self, edges):
         """
         Move the edges from the down layer to the up layer
@@ -217,7 +224,7 @@ class Solver:
         self._align_white_edges(edges)
         changed = False
         for edge in edges:
-            if edge.position[0] != 'D':
+            if edge.position[0] != "D":
                 continue
             if edge.orientation == 0:
                 continue
@@ -225,29 +232,34 @@ class Solver:
             while self.cube.face_color(edge.position[1]) != edge.color[1]:
                 counter += 1
                 if counter > 10:
-                    logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                    logging.warning(
+                        "Too many iterations, breaking out of the loop at line %d",
+                        __import__("inspect").currentframe().f_lineno,
+                    )
                     break
-                self.cube.rotate_face('D', clockwise=True)
-            while 'F' not in edge.position:
+                self.cube.rotate_face("D", clockwise=True)
+            while "F" not in edge.position:
                 counter += 1
                 if counter > 10:
-                    logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                    logging.warning(
+                        "Too many iterations, breaking out of the loop at line %d",
+                        __import__("inspect").currentframe().f_lineno,
+                    )
                     break
-                self.cube.rotate_cube(axis='y', clockwise=True)
-            if self._up_empty_face('F'):
+                self.cube.rotate_cube(axis="y", clockwise=True)
+            if self._up_empty_face("F"):
                 changed = True
                 # F'
-                self.cube.rotate_face('F', clockwise=False)
+                self.cube.rotate_face("F", clockwise=False)
                 # U'
-                self.cube.rotate_face('U', clockwise=False)
+                self.cube.rotate_face("U", clockwise=False)
                 # R
-                self.cube.rotate_face('R', clockwise=True)
+                self.cube.rotate_face("R", clockwise=True)
                 # U
-                self.cube.rotate_face('U', clockwise=True)
+                self.cube.rotate_face("U", clockwise=True)
             self.orient_cube()
             return changed
-   
-                   
+
     def _white_edges_up(self, edges):
         """
         Move the edges from the white layer to the up layer
@@ -257,39 +269,49 @@ class Solver:
         changed = False
         for edge in edges:
             # skip the edges in the up layer
-            if 'U' in edge.position:
+            if "U" in edge.position:
                 logging.debug("Edge %s is in the up layer", edge)
                 continue
             # detect the face that is not the white face
             face = edge.position[1]
-            if edge.orientation == 0 and edge.position[0] != 'D':
+            if edge.orientation == 0 and edge.position[0] != "D":
                 face = edge.position[0]
             logging.debug("face: %s, edge: %s", face, edge)
             sentinel = 0
-            logging.debug("U%s in %s", face, [other_edge.position for other_edge in edges])
+            logging.debug(
+                "U%s in %s", face, [other_edge.position for other_edge in edges]
+            )
             if self._up_empty_face(face):
                 sentinel = 0
                 while edge.position != f"U{face}":
                     self.cube.rotate_face(face, clockwise=True)
                     changed = True
                     sentinel += 1
-                    logging.debug("%d: edge.position: %s, face: %s", sentinel, edge.position, face)
+                    logging.debug(
+                        "%d: edge.position: %s, face: %s", sentinel, edge.position, face
+                    )
                     if sentinel > 10:
-                        logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                        logging.warning(
+                            "Too many iterations, breaking out of the loop at line %d",
+                            __import__("inspect").currentframe().f_lineno,
+                        )
                         break
         self.orient_cube()
         return changed
-    
+
     def _up_empty_face(self, face):
         """
         Make the up face empty
         """
         sentinel = 0
-        while 'W' in self.cube.get_cubie(f"U{face}").color:
-            self.cube.rotate_face('U', clockwise=True)
+        while "W" in self.cube.get_cubie(f"U{face}").color:
+            self.cube.rotate_face("U", clockwise=True)
             sentinel += 1
             if sentinel > 4:
-                logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                logging.warning(
+                    "Too many iterations, breaking out of the loop at line %d",
+                    __import__("inspect").currentframe().f_lineno,
+                )
                 return False
         return True
 
@@ -303,7 +325,10 @@ class Solver:
             counter += 1
             logging.debug("Iteration: %d", counter)
             if counter > 100:
-                logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
+                logging.warning(
+                    "Too many iterations, breaking out of the loop at line %d",
+                    __import__("inspect").currentframe().f_lineno,
+                )
                 self._white_edges_up(self.cube.edges(color_filter=["W"]))
                 self._align_white_edges(self.cube.edges(color_filter=["W"]))
                 break
@@ -321,14 +346,14 @@ class Solver:
             if self._down_edges_flipped(white_edges):
                 logging.debug("Flipped down edges")
             # self._middle_edges_up(white_edges)
-        # FIXME: get load from state working 
+        # FIXME: get load from state working
         # test with:
         #   GYYWWYRWWBWWOYRGOGROYGGWOGRROORBRBBOBRGBRYWGOBBYGOYWBY
         #   GWGBWBGGRWWBBYGOOYOYOYGGWRBYORBBYYORYYGRRWRROWGWOORBWB
         #   BBGWWYBYWWYOWYGBGOYGOBGRWORGBYBBOBRGWROWROGOYRRRGOWYYR
         # this cube is not finishing the cross
         return self._check_white_cross()
-        
+
     def _cross_up_clear(self, face):
         """
         check to see if rotating a face will impact a correctly positioned
@@ -337,7 +362,7 @@ class Solver:
         # get up edge of face
         edge = self.cube.get_cubie(f"U{face}")
         # if edge doesn't have white, we can move it
-        if not 'W' in edge.color:
+        if not "W" in edge.color:
             return True
         # if edge is not oriented, we can move it
         if edge.orientation != 0:
@@ -347,7 +372,7 @@ class Solver:
             return True
         # lets not move it
         return False
-  
+
     def cross(self):
         """
         2nd attempt to solve the cross on the first layer
@@ -360,15 +385,22 @@ class Solver:
             counter += 1
             logging.debug("Iteration: %d", counter)
             if counter > 100:
-                logging.warning("Too many iterations, breaking out of the loop at line %d", __import__('inspect').currentframe().f_lineno)
-                print(self.cube)
+                logging.warning(
+                    "Too many iterations, breaking out of the loop at line %d",
+                    __import__("inspect").currentframe().f_lineno,
+                )
+                logging.warning(self.cube)
                 break
-            
+
             for edge in white_edges:
                 logging.debug("Considering edge %s", edge)
                 # 1: up:
-                logging.debug("edge.position[0] (%s) == 'U', %s", edge.position[0], edge.position[0] == 'U')
-                if edge.position[0] == 'U':
+                logging.debug(
+                    "edge.position[0] (%s) == 'U', %s",
+                    edge.position[0],
+                    edge.position[0] == "U",
+                )
+                if edge.position[0] == "U":
                     logging.debug("Edge %s is in the up layer", edge)
                     # a: white up
                     if edge.orientation == 0:
@@ -379,10 +411,16 @@ class Solver:
                             # already in the right position
                             continue
                     # b: not white up or not in the right possition, send down
-                    logging.debug("Edge %s is not in the right position, send down", edge)
+                    logging.debug(
+                        "Edge %s is not in the right position, send down", edge
+                    )
                     for _ in range(2):
                         self.cube.rotate_face(edge.position[1], clockwise=True)
-                logging.debug("edge.position (%s) != 'U' || 'D', %s", edge.position, 'U' not in edge.position and 'D' not in edge.position)
+                logging.debug(
+                    "edge.position (%s) != 'U' || 'D', %s",
+                    edge.position,
+                    "U" not in edge.position and "D" not in edge.position,
+                )
                 # if 'U' not in edge.position and 'D' not in edge.position:
                 #     # 2: middle
                 #     logging.debug("Edge %s is in the middle layer", edge)
@@ -404,17 +442,26 @@ class Solver:
                 #                 self.cube.rotate_face(edge.position[1], clockwise=False)
 
                 # 2: middle
-                if 'U' not in edge.position and 'D' not in edge.position:
+                if "U" not in edge.position and "D" not in edge.position:
                     logging.debug("Edge %s is on the equator", edge)
                     # a: other aligned
-                    logging.debug("position_index for %d is %d", edge.orientation, (edge.orientation + 1) % 2)
-                    other_color = edge.get_colors(color_filter='W')[0]
+                    logging.debug(
+                        "position_index for %d is %d",
+                        edge.orientation,
+                        (edge.orientation + 1) % 2,
+                    )
+                    other_color = edge.get_colors(color_filter="W")[0]
                     other_face = edge.position[(edge.orientation + 1) % 2]
-                    logging.debug("%s == %s? %s", edge.get_colors('W'), self.cube.face_color(other_face), edge.get_colors('W') == self.cube.face_color(other_face))
+                    logging.debug(
+                        "%s == %s? %s",
+                        edge.get_colors("W"),
+                        self.cube.face_color(other_face),
+                        edge.get_colors("W") == self.cube.face_color(other_face),
+                    )
                     if other_color == self.cube.face_color(other_face):
                         logging.debug("Edge %s is aligned", edge)
                         self.cube.rotate_face(other_face, clockwise=True)
-                        if edge.position != f'U{other_face}':
+                        if edge.position != f"U{other_face}":
                             # undo
                             self.cube.rotate_face(other_face, clockwise=False)
                             # other direction
@@ -422,30 +469,45 @@ class Solver:
                     # b: not other aligned
                     else:
                         logging.debug("Edge %s is not aligned", edge)
-                        other_color = edge.get_colors(color_filter='W')[0]
+                        other_color = edge.get_colors(color_filter="W")[0]
                         other_face = edge.position[(edge.orientation + 1) % 2]
                         while not self._cross_up_clear(other_face):
                             logging.debug("Clearing face %s", other_face)
-                            self.cube.rotate_face('U')
+                            self.cube.rotate_face("U")
                         self.cube.rotate_face(other_face)
-                        if edge.position != f'D{other_face}':
+                        if edge.position != f"D{other_face}":
                             # undo
                             self.cube.rotate_face(other_face, clockwise=False)
                             # other direction
                             self.cube.rotate_face(other_face, clockwise=False)
                         # put up layer back
                         self._align_white_edges()
-                
+
                 # 3: down
-                if edge.position[0] == 'D':
+                if edge.position[0] == "D":
                     logging.debug("Edge %s is in the down layer", edge)
                     # is it in the right position?
                     # does other color match center?
-                    while not edge.get_colors(color_filter='W')[0] == self.cube.face_color(edge.position[1]):
-                        logging.debug("Edge %s, non-white color is %s", edge, edge.get_colors(color_filter='W')[0])
-                        logging.debug("Edge %s is not in the right position, aligning", edge)
-                        self.cube.rotate_face('D', clockwise=True)
-                        logging.debug("Edge %s: %s == %s? %s", edge, edge.get_colors(color_filter='W')[0], self.cube.face_color(edge.position[1]), edge.get_colors(color_filter='W')[0] == self.cube.face_color(edge.position[1]))
+                    while not edge.get_colors(color_filter="W")[
+                        0
+                    ] == self.cube.face_color(edge.position[1]):
+                        logging.debug(
+                            "Edge %s, non-white color is %s",
+                            edge,
+                            edge.get_colors(color_filter="W")[0],
+                        )
+                        logging.debug(
+                            "Edge %s is not in the right position, aligning", edge
+                        )
+                        self.cube.rotate_face("D", clockwise=True)
+                        logging.debug(
+                            "Edge %s: %s == %s? %s",
+                            edge,
+                            edge.get_colors(color_filter="W")[0],
+                            self.cube.face_color(edge.position[1]),
+                            edge.get_colors(color_filter="W")[0]
+                            == self.cube.face_color(edge.position[1]),
+                        )
                     # a: white down
                     if edge.orientation == 0:
                         logging.debug("Edge %s white is down, send up", edge)
@@ -454,25 +516,33 @@ class Solver:
                             self.cube.rotate_face(edge.position[1], clockwise=True)
                     # b: not white down
                     else:
-                        other_color = edge.get_colors('W')[0]
-                        logging.debug("Edge %s is not white down, twist and send up", edge)
+                        other_color = edge.get_colors("W")[0]
+                        logging.debug(
+                            "Edge %s is not white down, twist and send up", edge
+                        )
                         # rotate down counter clockwise
                         logging.debug("rotate down counter clockwise")
-                        self.cube.rotate_face('D', clockwise=False)
+                        self.cube.rotate_face("D", clockwise=False)
                         # rotate up clockwise
                         logging.debug("rotate up clockwise")
-                        self.cube.rotate_face('U', clockwise=True)
+                        self.cube.rotate_face("U", clockwise=True)
                         # rotate other face counter clockwise
-                        logging.debug("rotate other face %s counter clockwise", self.cube.face_by_color(other_color))
-                        self.cube.rotate_face(''.join(edge.position).replace('D',''), clockwise=False)
+                        logging.debug(
+                            "rotate other face %s counter clockwise",
+                            self.cube.face_by_color(other_color),
+                        )
+                        self.cube.rotate_face(
+                            "".join(edge.position).replace("D", ""), clockwise=False
+                        )
                         # rotate up counter clockwise
                         logging.debug("rotate up counter clockwise")
-                        self.cube.rotate_face('U', clockwise=False)
+                        self.cube.rotate_face("U", clockwise=False)
                         # rotate other face clockwise
-                        logging.debug("rotate other face %s clockwise", other_color)                       
-                        self.cube.rotate_face(self.cube.face_by_color(other_color), clockwise=True)     
+                        logging.debug("rotate other face %s clockwise", other_color)
+                        self.cube.rotate_face(
+                            self.cube.face_by_color(other_color), clockwise=True
+                        )
         return self._check_white_cross()
-
 
     def f2l(self):
         """
@@ -507,67 +577,5 @@ class Solver:
 
 
 if __name__ == "__main__":
-    # Example usage
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-    solver = Solver(Cube(size=3))
-    stats = {
-        "cross": 0,
-        "fail": 0
-    }
-    # solver.cube.scramble()
-    # # solver.cube.load("BWYBWOOGORYBRYYRBYOOGRGGBWGBYRBBGRBOWYWWRWWRYGOYOOGGRW")
-    # solver.cross()
-    # # solver.cube.load("WWRWWWRWGWRBOYRGOGOGGGGYOGBWOYYBRYBOYBRBRORYOBRBGOYWBY")
-    # # # solver.cube.rotate_face('U', clockwise=False)
-    # # solver._align_white_edges(solver.cube.edges(color_filter=["W"]))
-    # # solver.cross()
-    # print_color_cube(solver.cube)
-    failures = set()
-    ITERATIONS = 1000
-    for idx in range(ITERATIONS):
-        print(f"\rIteration: {idx + 1}: {stats['cross']}/{stats['fail']}", end="", flush=True)
-        solver.cube.reset()
-        solver.cube.scramble()
-        start_state = str(solver.cube)
-        if solver.cross():
-            stats["cross"] += 1
-            # print(f"Cross solved for {start_state}")
-        else:
-            stats["fail"] += 1
-            # print(f"Cross failed for {start_state}")
-            failures.add(start_state)
-    print("\r" + " "*80 + "\r", end="", flush=True)
-    print_color_cube(solver.cube)
-    print(f"{stats['cross']} crosses solved")
-    print(f"{stats['fail']} crosses failed")
-
-
-"""
-Notes:
-  I think the white cross logic can be a lot simpler, if we focus on one edge at a time
-    if up an oriented, but not correctly positioned, move it to the down layer
-    if up an oriented incorrectly, rotate other face
-    Scenarios:
-      1: up:
-        a: white up
-        b: not white up
-      2: middle
-        a: other aligned
-        b: not other aligned
-      3: down
-        a: white down
-        b: not white down
-
-    if middle:
-      rotate other face so that white is down
-      rotate down until other color matches center
-      rotate other face so that white is up
-    if down and white down:
-      rotate down until other color matches center
-      rotate other face so that white is up
-    if down and not white down:
-      rotate align to free up side
+    print("Run test_solver.py to test the solver")
     
-"""
