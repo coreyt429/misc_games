@@ -16,6 +16,7 @@ FACE_COLORS = dict(zip(FACES, COLORS))
 CORNERS = ["UFL", "UFR", "UBR", "UBL", "DFL", "DFR", "DBR", "DBL"]
 EDGES = ["UF", "UR", "UB", "UL", "DF", "DR", "DB", "DL", "FL", "FR", "BL", "BR"]
 
+
 class Cube:
     """
     Class representing a cube puzzle of size n x n.
@@ -54,7 +55,7 @@ class Cube:
             self.cube[face] = []
             for idx in range(self.size**2):
                 self.cube[face].append({"color": COLORS[face_idx], "index": idx})
-        
+
     def load(self, state):
         """
         Load a cube state from a string representation.
@@ -86,7 +87,7 @@ class Cube:
                 if len(square) > 1:
                     square_idx = int(square[1:])
                 self.cube[face].append({"color": color, "index": square_idx})
-        
+
         return self.cube
 
     def _solved_state(self):
@@ -338,6 +339,7 @@ class Cube:
 if __name__ == "__main__":
     print("Run test_cube.py to test the Cube class.")
     import json
+
     cube = Cube(size=3, debug=True)
     for cubie in cube.cubies:
         print(cubie)
