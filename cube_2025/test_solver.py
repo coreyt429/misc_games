@@ -8,11 +8,16 @@ from random import choice
 from solver import Solver
 from visualize import print_color_cube
 
+cube_states = {
+    "oriented":    "XXXXWXXXXXXXXYXXXXXXXXGXXXXXXXXBXXXXXXXXRXXXXXXXXOXXXX",
+    "solved":      "WWWWWWWWWYYYYYYYYYGGGGGGGGGBBBBBBBBBRRRRRRRRROOOOOOOOO",
+    "white_cross": "XWXWWWXWXXXXXYXXXXXGXXGXXXXXBXXBXXXXXRXXRXXXXXOXXOXXXX",
+}
+
 # Enable debug logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
 
 def check_mask(check_string, mask_string):
     """
@@ -23,7 +28,7 @@ def check_mask(check_string, mask_string):
         check_string = str(check_string)
     for idx, char in enumerate(check_string):
         if char != mask_string[idx] and mask_string[idx] != "X":
-            # print(f"{check_string}\n{mask_string}")
+            # print(f"\n{check_string}\n{mask_string}")
             return False
     return True
 
@@ -32,25 +37,9 @@ class TestSolver(unittest.TestCase):
     """
     Unit test cases for the Cube class.
     """
-
-    def test_white_cross(self):
-        """
-        Test the default initialization of the Cube class.
-        Validates that a cube of size 3 is created and is in a solved state.
-        """
-        solver = Solver()
-        solve_iterations = 1000
-
-        for _ in range(solve_iterations):
-            solver.cube.reset()
-            solver.cube.scramble()
-            solver.cross()
-            # Check if the cube is in a valid state
-            up_str = str(solver.cube)[0:9]
-            self.assertTrue(check_mask(up_str, "XWXWWWXWX"))
-            # check if our _check method works, not really necessary, but just to be sure
-            self.assertTrue(solver._check_white_cross())  # pylint: disable=protected-access
-
+    ###################
+    # Orientation tests
+    ###################
     def test_orient_cube(self):
         """
         Test orientation of cube to white on top and red in front.
@@ -71,9 +60,48 @@ class TestSolver(unittest.TestCase):
             self.assertTrue(
                 check_mask(
                     solver.cube,
-                    "XXXXWXXXXXXXXYXXXXXXXXGXXXXXXXXBXXXXXXXXRXXXXXXXXOXXXX"
+                    cube_states["oriented"],
                 )
             )
+
+    ###################
+    # Solver Steps
+    ###################
+    def test_white_cross(self):
+        """
+        Test the default initialization of the Cube class.
+        Validates that a cube of size 3 is created and is in a solved state.
+        """
+        solver = Solver()
+        solve_iterations = 1000
+
+        for _ in range(solve_iterations):
+            solver.cube.reset()
+            solver.cube.scramble()
+            solver.cross()
+            # Check if the cube is in a valid state
+            self.assertTrue(check_mask(solver.cube, cube_states["white_cross"]))
+            # check if our _check method works, not really necessary, but just to be sure
+            self.assertTrue(solver._check_white_cross())  # pylint: disable=protected-access
+    
+    # def test_white_corners(self):
+    #     """
+    #     Test solving the first layer corners.
+    #     Validates that the cube is in a valid state after solving the first layer corners.
+    #     """
+    #     solver = Solver()
+    #     solve_iterations = 1000
+
+    #     for _ in range(solve_iterations):
+    #         solver.cube.reset()
+    #         solver.cube.scramble()
+    #         solver.cross()
+    #         solver.white_corners()
+    #         # Check if the cube is in a valid state
+            
+    #         self.assertTrue(check_mask(solver.cube, cube_states["white_corners"]))
+    #         # check if our _check method works, not really necessary, but just to be sure
+    #         self.assertTrue(solver._check_white_corners())
 
 if __name__ == "__main__":
     unittest.main()
