@@ -332,8 +332,15 @@ class Solver:
         """
         Solve the first two layers
         """
-        # Implement the first two layers solving algorithm here
-        pass
+        # Implement the first two layerols solving algorithm here
+        white_corners = self.cube.corners(color_filter=["W"])
+        target_edges = []
+        for edge in self.cube.edges():
+            if "W" not in edge.color and "Y" not in edge.color:
+                target_edges.append(edge)
+        print(f"white_corners: {white_corners}")
+        print(f"target_edges: {target_edges}")
+        
 
     def oll(self):
         """
@@ -362,4 +369,8 @@ class Solver:
 
 if __name__ == "__main__":
     print("Run test_solver.py to test the solver")
+    solver = Solver()
+    solver.cube.scramble()
+    solver.cross()
+    solver.f2l()
     
