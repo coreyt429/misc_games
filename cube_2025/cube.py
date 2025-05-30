@@ -452,6 +452,15 @@ class Cube:
             self.reset()
         self.solved_state = self._solved_state()
 
+    def loglevel(self, level=logging.INFO):
+        """
+        Set the logging level for the cube.
+        This is useful for debugging and logging cube operations.
+        """
+        self.logger.setLevel(level)
+
+
+
     def reset(self):
         """
         Reset the cube to its solved state.
@@ -796,10 +805,15 @@ class Cube:
         The sequence should be a string of face rotations (e.g., "U, D, L, R, F, B).
         """
         self.logger.debug("sequence: %s", sequence)
+        sequence = sequence.replace("(", "").replace(")", "")
+        sequence = sequence.replace(" ", ",")
+        sequence = sequence.replace(",,", ",")
+        self.logger.debug("adjusted sequence: %s", sequence)
         moves = sequence.split(",")
         moves = [move.strip() for move in moves if move.strip()]
         for move in moves:
-            target = move[0].upper()
+            self.logger.debug("move: %s", move)
+            target = move[0]
             count = 1
             if "2" in move:
                 count = 2
@@ -811,8 +825,27 @@ class Cube:
                     self.rotate_face(target, clockwise=clockwise)
                 elif target in SLICE_AXIS:
                     self.rotate_slice(target, clockwise=clockwise)
-                elif target in ["X", "Y", "Z"]:
-                    self.rotate_cube(axis=target, clockwise=clockwise)
+                elif target.upper() in ["X", "Y", "Z"]:
+                    self.rotate_cube(axis=target.upper(), clockwise=clockwise)
+                elif target == 'd':
+                    self.rotate_face("D", clockwise=clockwise)
+                    self.rotate_slice("E", clockwise=not clockwise)
+                elif target == 'u':
+                    self.rotate_face("U", clockwise=clockwise)
+                    self.rotate_slice("E", clockwise=clockwise)
+                elif target == 'l':
+                    self.rotate_face("L", clockwise=clockwise)
+                    self.rotate_slice("M", clockwise=not clockwise)
+                elif target == 'r':
+                    self.rotate_face("R", clockwise=clockwise)
+                    self.rotate_slice("M", clockwise=clockwise)
+                elif target == 'f':
+                    self.rotate_face("F", clockwise=clockwise)
+                    self.rotate_slice("S", clockwise=clockwise)
+                elif target == 'b':
+                    self.rotate_face("B", clockwise=clockwise)
+                    self.rotate_slice("S", clockwise=not clockwise)
+                    
                 else:
                     raise ValueError(f"Invalid move {move} in sequence {sequence}")
 

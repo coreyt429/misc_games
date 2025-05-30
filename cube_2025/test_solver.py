@@ -8,11 +8,14 @@ from random import choice
 from solver import Solver
 from visualize import print_color_cube
 
+ITERATIONS = 1000
+
 cube_states = {
     "oriented": "XXXXWXXXXXXXXYXXXXXXXXGXXXXXXXXBXXXXXXXXRXXXXXXXXOXXXX",
     "solved": "WWWWWWWWWYYYYYYYYYGGGGGGGGGBBBBBBBBBRRRRRRRRROOOOOOOOO",
     "white_cross": "XWXWWWXWXXXXXYXXXXXGXXGXXXXXBXXBXXXXXRXXRXXXXXOXXOXXXX",
     "f2l": "WWWWWWWWWXXXXXXXXXGGGGGGXXXBBBBBBXXXRRRRRRXXXOOOOOOXXX",
+    "oll": "WWWWWWWWWYYYYYYYYYGGGGGGXXXBBBBBBXXXRRRRRRXXXOOOOOOXXX"
 }
 
 # Enable debug logging
@@ -50,7 +53,7 @@ class TestSolver(unittest.TestCase):
         The cube should have white on top and red in front.
         """
         solver = Solver()
-        solve_iterations = 1000
+        solve_iterations = ITERATIONS
         number_of_moves = 20
 
         for _ in range(solve_iterations):
@@ -75,7 +78,7 @@ class TestSolver(unittest.TestCase):
         Test solving the white cross.
         """
         solver = Solver()
-        solve_iterations = 1000
+        solve_iterations = ITERATIONS
 
         for _ in range(solve_iterations):
             solver.cube.reset()
@@ -91,7 +94,7 @@ class TestSolver(unittest.TestCase):
         Test solving the first two layers (F2L).
         """
         solver = Solver()
-        solve_iterations = 1000
+        solve_iterations = ITERATIONS
 
         for iteration in range(solve_iterations):
             solver.cube.reset()
@@ -109,24 +112,30 @@ class TestSolver(unittest.TestCase):
             # check if our _check method works, not really necessary, but just to be sure
             self.assertTrue(solver._f2l_is_solved())  # pylint: disable=protected-access
 
-    # def test_white_corners(self):
-    #     """
-    #     Test solving the first layer corners.
-    #     Validates that the cube is in a valid state after solving the first layer corners.
-    #     """
-    #     solver = Solver()
-    #     solve_iterations = 1000
+    def test_oll(self):
+        """
+        Test solving the orientation of the last layer (OLL).
+        """
+        solver = Solver()
+        solve_iterations = ITERATIONS
 
-    #     for _ in range(solve_iterations):
-    #         solver.cube.reset()
-    #         solver.cube.scramble()
-    #         solver.cross()
-    #         solver.white_corners()
-    #         # Check if the cube is in a valid state
-
-    #         self.assertTrue(check_mask(solver.cube, cube_states["white_corners"]))
-    #         # check if our _check method works, not really necessary, but just to be sure
-    #         self.assertTrue(solver._check_white_corners())
+        for iteration in range(solve_iterations):
+            solver.cube.reset()
+            solver.cube.scramble()
+            scramble_state = str(solver.cube)
+            solver.cross()
+            solver.f2l()
+            solver.oll()
+            solver.orient_cube()
+            if not check_mask(solver.cube, cube_states["oll"]):
+                logging.warning(
+                    "OLL failed iter(%s) for cube state: %s", iteration, scramble_state
+                )
+                logging.warning("Cube state after OLL: %s", str(solver.cube))
+            # Check if the cube is in a valid state
+            self.assertTrue(check_mask(solver.cube, cube_states["oriented"]))
+            # check if our _check method works, not really necessary, but just to be sure
+            self.assertTrue(solver._oll_is_solved())
 
 
 if __name__ == "__main__":

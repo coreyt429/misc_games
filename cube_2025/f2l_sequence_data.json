@@ -1,6 +1,4 @@
 {
-  "false": "Red",
-  "true": "Blue",
   "corner_sequences": {
     "U": {
       "W": {
