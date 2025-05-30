@@ -9,15 +9,17 @@ from solver import Solver
 from visualize import print_color_cube
 
 cube_states = {
-    "oriented":    "XXXXWXXXXXXXXYXXXXXXXXGXXXXXXXXBXXXXXXXXRXXXXXXXXOXXXX",
-    "solved":      "WWWWWWWWWYYYYYYYYYGGGGGGGGGBBBBBBBBBRRRRRRRRROOOOOOOOO",
+    "oriented": "XXXXWXXXXXXXXYXXXXXXXXGXXXXXXXXBXXXXXXXXRXXXXXXXXOXXXX",
+    "solved": "WWWWWWWWWYYYYYYYYYGGGGGGGGGBBBBBBBBBRRRRRRRRROOOOOOOOO",
     "white_cross": "XWXWWWXWXXXXXYXXXXXGXXGXXXXXBXXBXXXXXRXXRXXXXXOXXOXXXX",
+    "f2l": "WWWWWWWWWXXXXXXXXXGGGGGGXXXBBBBBBXXXRRRRRRXXXOOOOOOXXX",
 }
 
 # Enable debug logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
 
 def check_mask(check_string, mask_string):
     """
@@ -37,6 +39,7 @@ class TestSolver(unittest.TestCase):
     """
     Unit test cases for the Cube class.
     """
+
     ###################
     # Orientation tests
     ###################
@@ -53,7 +56,7 @@ class TestSolver(unittest.TestCase):
         for _ in range(solve_iterations):
             solver.cube.reset()
             for _ in range(number_of_moves):
-                axis = choice(['x', 'y', 'z'])
+                axis = choice(["x", "y", "z"])
                 clockwise = choice([True, False])
                 solver.cube.rotate_cube(axis=axis, clockwise=clockwise)
             solver.orient_cube()
@@ -69,8 +72,7 @@ class TestSolver(unittest.TestCase):
     ###################
     def test_white_cross(self):
         """
-        Test the default initialization of the Cube class.
-        Validates that a cube of size 3 is created and is in a solved state.
+        Test solving the white cross.
         """
         solver = Solver()
         solve_iterations = 1000
@@ -83,7 +85,30 @@ class TestSolver(unittest.TestCase):
             self.assertTrue(check_mask(solver.cube, cube_states["white_cross"]))
             # check if our _check method works, not really necessary, but just to be sure
             self.assertTrue(solver._check_white_cross())  # pylint: disable=protected-access
-    
+
+    def test_f2l(self):
+        """
+        Test solving the first two layers (F2L).
+        """
+        solver = Solver()
+        solve_iterations = 1000
+
+        for iteration in range(solve_iterations):
+            solver.cube.reset()
+            solver.cube.scramble()
+            scramble_state = str(solver.cube)
+            solver.cross()
+            solver.f2l()
+            if not check_mask(solver.cube, cube_states["f2l"]):
+                logging.warning(
+                    "f2l failed iter(%s) for cube state: %s", iteration, scramble_state
+                )
+                logging.warning("Cube state after f2l: %s", str(solver.cube))
+            # Check if the cube is in a valid state
+            self.assertTrue(check_mask(solver.cube, cube_states["f2l"]))
+            # check if our _check method works, not really necessary, but just to be sure
+            self.assertTrue(solver._f2l_is_solved())  # pylint: disable=protected-access
+
     # def test_white_corners(self):
     #     """
     #     Test solving the first layer corners.
@@ -98,10 +123,11 @@ class TestSolver(unittest.TestCase):
     #         solver.cross()
     #         solver.white_corners()
     #         # Check if the cube is in a valid state
-            
+
     #         self.assertTrue(check_mask(solver.cube, cube_states["white_corners"]))
     #         # check if our _check method works, not really necessary, but just to be sure
     #         self.assertTrue(solver._check_white_corners())
+
 
 if __name__ == "__main__":
     unittest.main()

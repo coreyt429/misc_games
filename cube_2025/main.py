@@ -5,10 +5,11 @@ to play with the cube
 
 import logging
 from cube import Cube
+from solver import Solver
 from visualize import print_color_cube
 
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
@@ -17,6 +18,7 @@ def main_loop():
     Main loop for the command line interface.
     """
     cube = Cube(size=3, debug=True)
+    solver = Solver(cube)
 
     while True:
         print_color_cube(str(cube))
@@ -28,6 +30,9 @@ def main_loop():
                 return
             if command in ["u", "f", "d", "l", "r", "b"]:
                 cube.rotate_face(command.upper(), clockwise=True)
+            elif command in ["u2", "f2", "d2", "l2", "r2", "b2"]:
+                cube.rotate_face(command.upper()[:-1], clockwise=True)
+                cube.rotate_face(command.upper()[:-1], clockwise=True)
             elif command in ["u'", "f'", "d'", "l'", "r'", "b'"]:
                 cube.rotate_face(command.upper()[:-1], clockwise=False)
             elif command in ["x", "y", "z"]:
@@ -53,6 +58,14 @@ def main_loop():
                 print(f"new orientation: {cubie.orientation}")
             elif len(command) == 54:
                 cube = Cube(state=command)
+            elif command in ["wc", "whitecross", "white_cross"]:
+                solver.cross()
+            elif command == "f2l":
+                solver.f2l()
+            elif command == "oll":
+                solver.oll()
+            elif command == "pll":
+                solver.pll()
             else:
                 cubie = cube.get_cubie(command.upper())
                 if cubie:

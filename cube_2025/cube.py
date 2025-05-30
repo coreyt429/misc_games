@@ -15,7 +15,7 @@ Notes:
 
 import logging
 from random import choice
-from visualize import print_color_cube
+# from visualize import print_color_cube
 
 FACES = ["U", "D", "L", "R", "F", "B"]
 COLORS = ["W", "Y", "G", "B", "R", "O"]
@@ -375,7 +375,8 @@ class Cubie:
                 else:
                     self.orientation = (self.orientation - 1) % len(self.color)
 
-    def __init__(self, position, color, orientation):
+    def __init__(self, cube, position, color, orientation):
+        self.cube = cube
         self.position = position
         self.color = color
         self.orientation = orientation
@@ -389,6 +390,17 @@ class Cubie:
 
     def __str__(self):
         return f"{self.color} {self.position} {self.orientation}"
+
+    def alignment(self):
+        """
+        Get the count of faces that are correct.
+        This does not take orientation into account.
+        """
+        count = 0
+        for face in self.position:
+            if self.cube.face_color(face) in self.color:
+                count += 1
+        return count
 
     def get_colors(self, color_filter=""):
         """
@@ -449,6 +461,7 @@ class Cube:
         for corner in CORNERS:
             self.cubies.append(
                 Cubie(
+                    cube=self,
                     position=corner,
                     color=tuple(
                         COLORS[FACES.index(face)] for face in CORNER_FACE_ORDER[corner]
@@ -460,6 +473,7 @@ class Cube:
             for edge in EDGES:
                 self.cubies.append(
                     Cubie(
+                        cube=self,
                         position=edge,
                         color=tuple(COLORS[FACES.index(face)] for face in edge),
                         orientation=0,
@@ -468,6 +482,7 @@ class Cube:
             for center in FACES:
                 self.cubies.append(
                     Cubie(
+                        cube=self,
                         position=center,
                         color=tuple(COLORS[FACES.index(face)] for face in center),
                         orientation=0,
@@ -593,25 +608,34 @@ class Cube:
         self.logger.debug("is_solved: %s == %s", self.solved_state, hash(self))
         return self.solved_state == hash(self)
 
-    def get_sticker(self, face, index):
+    def get_sticker(self, face, index=None, cubie=None):
         """
         Get the sticker at a specific face and index.
         This is useful for accessing specific stickers on the cube.
         """
-        self.logger.debug("get_sticker: %s %s", face, index)
-        position = FACE_POSITIONS[face][index]
-        if self.size == 2:
-            while len(position) < 3:
-                index += 1
-                position = FACE_POSITIONS[face][index]
-        self.logger.debug("position: %s", position)
-        cubie = self.get_cubie(position)
+        if cubie is None:
+            if index is None:
+                raise ValueError("Index must be specified if cubie is not provided")
+            self.logger.debug("get_sticker: %s %s", face, index)
+            position = FACE_POSITIONS[face][index]
+            if self.size == 2:
+                while len(position) < 3:
+                    index += 1
+                    position = FACE_POSITIONS[face][index]
+            self.logger.debug("position: %s", position)
+            cubie = self.get_cubie(position)
+        else:
+            position = cubie.position
         if cubie is None:
             raise ValueError(f"Invalid cubie position {position}")
         self.logger.debug("cubie.color: %s", cubie.color)
         self.logger.debug("cubie.position: %s", cubie.position)
         self.logger.debug("cubie.orientation: %s", cubie.orientation)
-        self.logger.debug("position.index(face): %s", position.index(face))
+        try:
+            self.logger.debug("position.index(face): %s", position.index(face))
+        except ValueError as exc:
+            self.logger.error("Invalid face %s in position %s", face, position)
+            raise ValueError(f"Invalid face {face} in position {position}") from exc
         if len(cubie.color) == 3:
             return cubie.color[
                 (CORNER_FACE_ORDER[position].index(face) + cubie.orientation)
@@ -765,6 +789,32 @@ class Cube:
 
         for cubie in self.get_cubies(face_filter=[face]):
             cubie.rotate(axis, clockwise, axis_map)
+
+    def sequence(self, sequence):
+        """
+        Apply a sequence of rotations to the cube.
+        The sequence should be a string of face rotations (e.g., "U, D, L, R, F, B).
+        """
+        self.logger.debug("sequence: %s", sequence)
+        moves = sequence.split(",")
+        moves = [move.strip() for move in moves if move.strip()]
+        for move in moves:
+            target = move[0].upper()
+            count = 1
+            if "2" in move:
+                count = 2
+            clockwise = True
+            if "'" in move:
+                clockwise = False
+            for _ in range(count):
+                if target in FACES:
+                    self.rotate_face(target, clockwise=clockwise)
+                elif target in SLICE_AXIS:
+                    self.rotate_slice(target, clockwise=clockwise)
+                elif target in ["X", "Y", "Z"]:
+                    self.rotate_cube(axis=target, clockwise=clockwise)
+                else:
+                    raise ValueError(f"Invalid move {move} in sequence {sequence}")
 
     def __iter__(self):
         """
