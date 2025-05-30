@@ -1,0 +1,109 @@
+{
+  "false": "Red",
+  "true": "Blue",
+  "corner_sequences": {
+    "U": {
+      "W": {
+        "FR": {
+          "true": "R,U,R',U',R,U,R',U',R,U,R'",
+          "false": "R,U',R',U,Y,R',U,R"
+        },
+        "UF":{
+          "true": "R,U,R',U',U',R,U,R',U',R,U,R'",
+          "false": "F',U2,F,U,F',U',F"
+        },
+        "UR":{
+          "true": "R,U2,R',U',R,U,R'",
+          "false": "Y',R',U',R,U,U,R',U',R,U,R',U',R"
+        },
+        "UL": {
+          "true": "U2,R,U,R',U,R,U',R'",
+          "false": "U',F',U2,F,U',F',U,F"
+        },
+        "UB":{
+          "true": "U,R,U2,R',U,R,U',R'",
+          "false": "U2,F',U',F,U',F',U,F"
+        }
+      },
+      "true": {
+        "UB": {
+          "true": "U',R,U,R',U',R,U2,R'",
+          "false": "U,F',U',F,U',F',U',F"
+        },
+        "UR": {
+          "true": "U,R,U',R'",
+          "false": "U',R,U2,R',U,F',U',F"
+        },
+        "UF": {
+          "true": "F',U,F,U',U',Y',F,U,F'",
+          "false": "U,F',U,F,U',F',U',F"
+        },
+        "UL": {
+          "true": "U',R,U2,R',U',R,U2,R'",
+          "false": "F',U',F"
+        },
+        "FR": {
+          "true": "U',R,U',R',U',R,U2,R'",
+          "false": "U',R,U,R',U,Y,R',U',R"
+        }
+      },
+      "false": {
+        "UB": {
+          "true": "R,U,R'",
+          "false": "U,F',U2,F,U,F',U2,F"
+        },
+        "UR": {
+          "true": "U',R,U',R',U,R,U,R'",
+          "false": "R,U',R',U,U,Y,R',U',R"
+        },
+        "UF": {
+          "true": "U,F',U2,F,U',R,U,R'",
+          "false": "U',F',U,F"
+        },
+        "UL": {
+          "true": "U',R,U,R',U,R,U,R'",
+          "false": "U,F',U',F,U,F',U2,F"
+        },
+        "FR": {
+          "true": "U,F',U,F,U,F',U2,F",
+          "false": "U,F',U',F,U',Y',F,U,F'"
+        }
+      }
+    },
+    "D": {
+      "W":{
+        "FR":{
+           "true": "",
+          "false": "R,U',R',U,Y,R',U2,R,U,R',U2,R" 
+        },
+        "UR":{
+          "true": "U',F',U,F,U,R,U',R'"
+        },
+        "UF":{
+          "false": "U,R,U',R',U',F',U,F"
+        }
+      },
+      "true": {
+        "UR": {
+          "true": "R,U,R',U',R,U,R'"
+        },
+        "UF": {
+          "false": "F',U,F,U',F',U,F"
+        }
+      },
+      "false": {
+        "UR": {
+          "true": "R,U',R',U,R,U',R'"
+        },
+        "UL": {
+          "false": "F',U',F,U,F',U',F"
+        }
+      }
+    }
+  },
+  "edge_sequences": {
+    "FL": "L',U',L,U",
+    "BL": "B',U,B,U'",
+    "BR": "R',U,R,U'"
+  }
+}
