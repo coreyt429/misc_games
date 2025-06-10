@@ -565,11 +565,6 @@ class Cube:
         representing the colors of the stickers on each face.
         Note, while this will load a debug string or normal string,
         a debug string is preffered for loading.
-
-        FIXME: load is not always ordering colors correctly:
-        BWYBWOOGORYBRYYRBYOOGRGGBWGBYRBBGRBOWYWWRWWRYGOYOOGGRW
-        Cubie(color=('W', 'R') is Cubie(color=('R', 'W')
-        This breaks assumptions about the cube.
         """
         self.logger.debug("load: %s", state)
         # load non_debug string
@@ -583,10 +578,16 @@ class Cube:
                 f"Invalid cube state length {len(states)} for size {self.size}"
             )
         self.reset()
+        valid_cubies = set(cubie.color for cubie in self.get_cubies())
         for face in FACES:
             for idx in range(self.size**2):
                 color = states.pop(0)
                 self.set_sticker(face, idx, color)
+        # adjust cubies to their positions
+        for cubie in self.get_cubies():
+            while cubie.color not in valid_cubies:
+                cubie.color = cubie.color[1:] + cubie.color[:1]
+                cubie.orientation = (cubie.orientation - 1) % len(cubie.color)
 
     def _solved_state(self):
         """
@@ -734,6 +735,13 @@ class Cube:
 
     def __str__(self):
         """
+        String representation of the cube.
+        This is useful for printing the cube's current state.
+        """
+        return self.as_string()
+        
+    def as_string(self):
+        """
         Return a string representation of the cube for printing.
         """
         state_string = ""
@@ -806,6 +814,8 @@ class Cube:
         """
         self.logger.debug("sequence: %s", sequence)
         sequence = sequence.replace("(", "").replace(")", "")
+        sequence = sequence.replace("[", "").replace("]", "")
+        sequence = sequence.replace("{", "").replace("}", "")
         sequence = sequence.replace(" ", ",")
         sequence = sequence.replace(",,", ",")
         self.logger.debug("adjusted sequence: %s", sequence)

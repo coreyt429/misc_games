@@ -23,6 +23,14 @@ def main_loop():
     while True:
         print_color_cube(str(cube))
         user_input = input("Enter a command: ").strip()
+        if user_input.startswith("seq"):
+            sequence = user_input.split(":")[1].strip()
+            if sequence:
+                cube.sequence(sequence)
+            else:
+                print("No sequenc" \
+                "e provided.")
+            continue
         commands = [cmd.strip().lower() for cmd in user_input.replace(",", " ").split()]
         for command in commands:
             if command in ["quit", "q"]:
@@ -58,6 +66,7 @@ def main_loop():
                 print(f"new orientation: {cubie.orientation}")
             elif len(command) == 54:
                 cube = Cube(state=command)
+                solver.cube = cube
             elif command in ["wc", "whitecross", "white_cross"]:
                 solver.cross()
             elif command == "f2l":
@@ -66,6 +75,10 @@ def main_loop():
                 solver.oll()
             elif command == "pll":
                 solver.pll()
+            elif command == "pllstate":
+                print(f"PLL state: {solver._pll_get_state()}")
+            elif command == "solve":
+                solver.solve()
             else:
                 cubie = cube.get_cubie(command.upper())
                 if cubie:
@@ -77,3 +90,4 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
+

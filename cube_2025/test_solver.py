@@ -137,6 +137,34 @@ class TestSolver(unittest.TestCase):
             # check if our _check method works, not really necessary, but just to be sure
             self.assertTrue(solver._oll_is_solved())
 
+    def test_pll(self):
+        """
+        Test solving the permutation of the last layer (PLL).
+        """
+        solver = Solver()
+        solve_iterations = ITERATIONS
+
+        for iteration in range(solve_iterations):
+            solver.cube.reset()
+            solver.cube.scramble()
+            scramble_state = str(solver.cube)
+            solver.cross()
+            solver.f2l()
+            solver.oll()
+            solver.pll()
+            if not solver._pll_is_solved():
+                logging.warning(
+                    "PLL is not solved after OLL, iteration: %s, cube state: %s, pll state: %s",
+                    iteration,
+                    scramble_state,
+                    solver._pll_get_state()
+                )
+            solver.orient_cube()
+            # Check if the cube is in a valid state
+            self.assertTrue(check_mask(solver.cube, cube_states["solved"]))
+            # check if our _check method works, not really necessary, but just to be sure
+            self.assertTrue(solver._pll_is_solved())
+
 
 if __name__ == "__main__":
     unittest.main()
