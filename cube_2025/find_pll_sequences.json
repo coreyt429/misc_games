@@ -1,0 +1,25 @@
+import json
+from cube import Cube
+from solver import Solver
+
+def main():
+    # Create a new Cube instance
+    cube = Cube()
+
+    # Scramble the cube
+    cube.scramble()
+
+    # Print the scrambled state of the cube
+    print("Scrambled Cube:")
+    print(cube)
+
+    # Create a Solver instance
+    solver = Solver(cube)
+
+    # Solve the cube
+    solution = solver.solve()
+
+    # Print the solution steps
+    print("Solution Steps:")
+    for step in solution:
+        print(step)
